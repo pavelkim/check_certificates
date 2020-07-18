@@ -36,7 +36,7 @@ jobs:
       run: if [[ "${{ steps.tagexists.outputs.tagexists }}" == "null" ]]; then exit 0; else exit 2; fi
 
     - name: Set version in the script
-      run: sed -i ".bak" -e "s/^VERSION=\"DEV\"$/${{steps.readversionfile.outputs.desiredversion}}/" check_certificates.sh
+      run: sed -i".bak" -e "s/^VERSION=\"DEV\"$/${{steps.readversionfile.outputs.desiredversion}}/" check_certificates.sh
 
     - name: Verify version from the script
       run: grep "VERSION=" check_certificates.sh
