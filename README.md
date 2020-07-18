@@ -2,6 +2,10 @@
 
 Use this script to automate HTTPS SSL Certificate monitoring. It curl's remote server on 443 port and then verifies remote SSL Certificate's expiration date.
 
+# Releases
+
+Latest release: [Download](https://github.com/pavelkim/check_certificates/releases/latest/download/check_certificates.sh)
+
 # Usage
 
 The script takes on input a file with a list of hostnames:
