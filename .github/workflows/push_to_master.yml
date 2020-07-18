@@ -7,7 +7,7 @@ on:
 jobs:
 
   build:
-    name: Build dev branch
+    name: Build master branch
     runs-on: ubuntu-latest
     steps:
 
@@ -34,6 +34,12 @@ jobs:
     
     - name: Check if planned tag doesn't exist yet
       run: if [[ "${{ steps.tagexists.outputs.tagexists }}" == "null" ]]; then exit 0; else exit 2; fi
+
+    - name: Set version in the script
+      run: sed -i ".bak" -e "s/^VERSION=\"DEV\"$/${{steps.readversionfile.outputs.desiredversion}}/" check_certificates.sh
+
+    - name: Verify version from the script
+      run: grep "VERSION=" check_certificates.sh
 
     - name: Create a new tag
       run: |

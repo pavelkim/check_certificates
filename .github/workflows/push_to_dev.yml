@@ -34,4 +34,3 @@ jobs:
     
     - name: Check if planned tag doesn't exist yet
       run: if [[ "${{ steps.tagexists.outputs.tagexists }}" == "null" ]]; then echo "New version is OK"; else echo "Warning! Version ${{ steps.tagexists.outputs.tagexists }} already exists."; fi
-
