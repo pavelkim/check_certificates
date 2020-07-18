@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Checks if SSL certificate on https server is valid.
+# Checks if SSL Certificate on https server is valid.
 #
 # Usage: 
 #  ./check_certificate input_filename.txt
@@ -15,17 +15,25 @@
 #  domain2.com  2013-10-31 00:00:00  2016-10-30 23:59:59  92
 #  domain2.com  2015-12-03 00:00:00  2016-12-02 23:59:59  125
 #
-#
-# v1.0 2017-09-23 Basic checker (Pavel Kim)
-# v1.1 2018-05-07 Better logging (Pavel Kim)
-# v1.2 2020-07-18 Better result output (Pavel Kim)
 
 set -o pipefail
 
 [[ "${DEBUG}" == "1" ]] && GLOBAL_LOGLEVEL="7" || GLOBAL_LOGLEVEL="0"
-[[ ! -z "$1" ]] && INPUT_FILENAME="$1" || { echo "Set the input file as the 1st parameter"; exit 2; }
+[[ ! -z "$1" ]] && INPUT_FILENAME="$1" || { echo "Error: Input file not set."; usage; exit 2; }
 
 [[ -f "${INPUT_FILENAME}" ]] || { echo "Can't open input file: ${INPUT_FILENAME}"; exit 2; }
+
+VERSION="1.1.0"
+
+
+usage() {
+
+	cat << EOF
+SSL Certificate checker v.${VERSION}
+Usage: $0 input_filename.txt
+EOF
+
+}
 
 timestamp() {
     date "+%F %T"
@@ -69,7 +77,7 @@ check_https_certificate_dates() {
 	local dates=( )
 	
 	info "Starting https ssl certificate validation for ${remote_hostname}"
-	result="$( echo | openssl s_client -servername "${remote_hostname}" -connect "${remote_hostname}:443" 2>/dev/null | openssl x509 -noout -dates | cut -d"=" -f2  )"
+	result="$( echo | openssl s_client -servername "${remote_hostname}" -connect "${remote_hostname}:443" 2>/dev/null | openssl x509 -noout -dates 2>/dev/null | cut -d"=" -f2  )"
 	RC=$?
 	
 	if [[ "${RC}" != "0" ]]; then
@@ -96,7 +104,10 @@ formatted_result=( )
 today_timestamp="$(date "+%s")"
 sorted_result=( )
 
-while read -r remote_hostname; do 
+while IFS= read -r remote_hostname; do 
+
+	[[ -z "${remote_hostname}" ]] && continue
+
 	info "Processing '${remote_hostname}'"
 	current_result=$( check_https_certificate_dates "${remote_hostname}" )
 	rc="$?"
