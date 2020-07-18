@@ -1,0 +1,36 @@
+name: Go
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    name: Build dev branch
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Check if .version file exists
+      run: if [[ -f .version ]]; then exit 0; else exit 2; fi
+
+    - name: Read out .version file
+      id: readversionfile
+      run: echo "::set-output name=desiredversion::$(cat .version)"
+
+    - name: Verify version
+      run: echo "${{steps.readversionfile.outputs.desiredversion}}"
+
+    - name: Test run
+      run: bash check_certificates.sh test/inputfile.txt
+
+    - name: Lookup planned tag
+      id: tagexists
+      run: |
+        echo "::set-output name=tagexists::$(curl -s -X GET -H 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' --url https://api.github.com/repos/${{ github.repository }}/git/refs/tags/${{steps.readversionfile.outputs.desiredversion}} | jq .object.sha)"
+    
+    - name: Check if planned tag doesn't exist yet
+      run: if [[ "${{ steps.tagexists.outputs.tagexists }}" == "null" ]]; then exit 0; else exit 2; fi

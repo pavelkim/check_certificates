@@ -19,12 +19,8 @@
 set -o pipefail
 
 [[ "${DEBUG}" == "1" ]] && GLOBAL_LOGLEVEL="7" || GLOBAL_LOGLEVEL="0"
-[[ ! -z "$1" ]] && INPUT_FILENAME="$1" || { echo "Error: Input file not set."; usage; exit 2; }
 
-[[ -f "${INPUT_FILENAME}" ]] || { echo "Can't open input file: ${INPUT_FILENAME}"; exit 2; }
-
-VERSION="1.1.0"
-
+VERSION="DEV"
 
 usage() {
 
@@ -36,7 +32,7 @@ EOF
 }
 
 timestamp() {
-    date "+%F %T"
+	date "+%F %T"
 }
 
 info() {
@@ -67,6 +63,40 @@ warning() {
 	fi
 }
 
+date_to_epoch() {
+	local date_from
+
+	[[ ! -z "$1" ]] && date_from="$1" || return 2
+
+	case "$OSTYPE" in
+
+		linux*)
+			date -d "${date_from}" "+%s"
+		;;
+		darwin* ) 
+			date -j -f "%b %d %T %Y %Z" "${date_from}" "+%s"
+		;;
+	esac
+}
+
+
+date_from_epoch() {
+	local date_epoch
+	local date_format
+
+	[[ ! -z "$1" ]] && date_epoch="$1" || return 2
+	[[ ! -z "$2" ]] && date_format="$2" || return 2
+
+	case "$OSTYPE" in
+
+		linux*)
+			date -d "@${date_epoch}" "${date_format}"
+		;;
+		darwin* ) 
+			date -j -f "%s" "${date_epoch}" "${date_format}"
+		;;
+	esac
+}
 
 check_https_certificate_dates() {
 
@@ -91,53 +121,64 @@ check_https_certificate_dates() {
 		info "${remote_hostname} Not before ${dates[0]}"
 		info "${remote_hostname} Not after ${dates[1]}"
 		
-		final_result="${remote_hostname} $(date -d "${dates[0]}" "+%s") $(date -d "${dates[1]}" "+%s")"
+		final_result="${remote_hostname} $(date_to_epoch "${dates[0]}") $(date_to_epoch "${dates[1]}")"
 	fi
 	
 	echo "${final_result}"
 	return "${RC}"
 }
 
-full_result=( )
-error_result=( )
-formatted_result=( )
-today_timestamp="$(date "+%s")"
-sorted_result=( )
+main() {
 
-while IFS= read -r remote_hostname; do 
+	[[ ! -z "${1}" ]] && input_filename="${1}" || { echo "Error: Input file not set."; usage; exit 2; }
+	[[ -f "${input_filename}" ]] || { echo "Can't open input file: '${input_filename}'"; exit 2; }
 
-	[[ -z "${remote_hostname}" ]] && continue
+	local full_result=( )
+	local error_result=( )
+	local formatted_result=( )
+	local today_timestamp
+	local sorted_result=( )
 
-	info "Processing '${remote_hostname}'"
-	current_result=$( check_https_certificate_dates "${remote_hostname}" )
-	rc="$?"
-	
-	if [[ "${rc}" != "0" ]]; then
-		warning "Skipping '${remote_hostname}'"
-		error_result+=( "${remote_hostname}" )
-	else
-		full_result+=( "${current_result}" )
+	today_timestamp="$(date "+%s")"
+
+	while IFS= read -r remote_hostname; do 
+
+		[[ -z "${remote_hostname}" ]] && continue
+
+		info "Processing '${remote_hostname}'"
+		current_result=$( check_https_certificate_dates "${remote_hostname}" )
+		rc="$?"
+		
+		if [[ "${rc}" != "0" ]]; then
+			warning "Skipping '${remote_hostname}'"
+			error_result+=( "${remote_hostname}" )
+		else
+			full_result+=( "${current_result}" )
+		fi
+		info "Finished processing '${remote_hostname}'"
+	done < "${input_filename}"
+
+	if [[ "${#full_result[@]}" -le "0" ]]; then
+		warning "Couldn't process anything from '${input_filename}'"
 	fi
-	info "Finished processing '${remote_hostname}'"
-done < "${INPUT_FILENAME}"
 
-if [[ "${#full_result[@]}" -le "0" ]]; then
-	warning "Couldn't process anything from ${INPUT_FILENAME}"
-fi
+	if [[ "${#error_result[@]}" -gt "0" ]]; then
+		for error_item in "${error_result[@]}"; do
+			formatted_result+=( "${error_item}	error	error	-1" )
+		done
+	fi
 
-if [[ "${#error_result[@]}" -gt "0" ]]; then
-	for error_item in "${error_result[@]}"; do
-		formatted_result+=( "${error_item}	error	error	-1" )
+	for result_item in "${full_result[@]}"; do
+		result_item_parts=( ${result_item} )
+		formatted_result+=( "${result_item_parts[0]}	$(date_from_epoch "${result_item_parts[1]}" "+%F %T")	$(date_from_epoch "${result_item_parts[2]}" "+%F %T")	$(( (result_item_parts[2] - today_timestamp) / 86400 ))" )
 	done
-fi
 
-for result_item in "${full_result[@]}"; do
-	result_item_parts=( ${result_item} )
-	formatted_result+=( "${result_item_parts[0]}	$(date -d "@${result_item_parts[1]}" "+%F %T")	$(date -d "@${result_item_parts[2]}" "+%F %T")	$(( (result_item_parts[2] - today_timestamp) / 86400 ))" )
-done
+	while read formatted_item; do
+		sorted_result+=( "${formatted_item}" )
+	done <<< "$( IFS=$'\n' ; echo "${formatted_result[*]}" | sort -n -k6)"
 
-while read formatted_item; do
-	sorted_result+=( "${formatted_item}" )
-done <<< "$( IFS=$'\n' ; echo "${formatted_result[*]}" | sort -n -k6)"
+	(IFS=$'\n'; echo "${sorted_result[*]}" | column -t -s$'\t')
 
-(IFS=$'\n'; echo "${sorted_result[*]}" | column -t -s$'\t')
+}
+
+main "$@"

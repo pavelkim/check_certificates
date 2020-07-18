@@ -1,0 +1,4 @@
+example.com
+google.com
+mail.com
+imaginary-domain-9000.com
