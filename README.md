@@ -10,7 +10,7 @@ Latest release: [Download](https://github.com/pavelkim/check_certificates/releas
 
 The script takes on input a file with a list of hostnames:
 ```bash
-./check_certificate input_filename.txt
+./check_certificates.sh input_filename.txt
 ```
 
 # Input file format

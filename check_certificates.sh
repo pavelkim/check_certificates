@@ -2,9 +2,6 @@
 #
 # Checks if SSL Certificate on https server is valid.
 #
-# Usage: 
-#  ./check_certificate input_filename.txt
-#
 # Input file format:
 #  domain1.com
 #  domain2.com
@@ -26,7 +23,13 @@ usage() {
 
 	cat << EOF
 SSL Certificate checker v.${VERSION}
-Usage: $0 input_filename.txt
+Usage: $0 [-l] [-n] [-A n] -i input_filename
+
+	-i, --input-filename 	 Path to the list of domains to check
+	-l, --only-alerting  	 Show only alerting domains (expiring soon and erroneous)
+	-n, --only-names     	 Show only domain names instead of the full table
+	-A, --alert-limit    	 Set threshold of upcoming expiration alert to n days
+
 EOF
 
 }
@@ -128,16 +131,54 @@ check_https_certificate_dates() {
 	return "${RC}"
 }
 
+_required_cli_parameter() {
+
+	local parameter_name
+	local parameter_description
+
+	[[ ! -z "${1}" ]] && parameter_name="${1}" || { echo "Error: Parameter name not set."; exit 2; }
+	[[ ! -z "${2}" ]] && parameter_description="${2}" || parameter_description=""
+
+	if [[ -z "${!parameter_name}" ]]; then
+		echo "Required parameter: ${parameter_description:-$parameter_name}"
+		exit 1
+	else
+		return 0
+	fi
+
+}
+
 main() {
 
-	[[ ! -z "${1}" ]] && input_filename="${1}" || { echo "Error: Input file not set."; usage; exit 2; }
-	[[ -f "${input_filename}" ]] || { echo "Can't open input file: '${input_filename}'"; exit 2; }
+	local CLI_INPUT_FILENAME
+	local CLI_ONLY_ALERTING=0
+	local CLI_ALERT_LIMIT=7
+	local CLI_ONLY_NAMES=0
+	local CLI_RETRIES
+	local CLI_VERBOSE
+
+	while [[ "$#" -gt 0 ]]; do 
+		case "${1}" in
+			-i|--input-filename)	CLI_INPUT_FILENAME="${2}"; shift; shift;;
+			-l|--only-alerting)	CLI_ONLY_ALERTING=1; shift;;
+			-n|--only-names)	CLI_ONLY_NAMES=1; shift;;
+			-A|--alert-limit)	CLI_ALERT_LIMIT="${2}"; shift; shift;;
+			-R|--retries)	CLI_RETRIES="${2}"; shift; shift;;
+			-v|--verbose)	CLI_VERBOSE=1;shift;;
+			-h|--help) usage; exit 0;;
+			*) usage "Unknown parameter passed: '${1}'"; shift; shift;;
+		esac; 
+	done
+
+	_required_cli_parameter CLI_INPUT_FILENAME "Input filename"
+	[[ -f "${CLI_INPUT_FILENAME}" ]] || { echo "Can't open input file: '${CLI_INPUT_FILENAME}'"; exit 2; }
+
 
 	local full_result=( )
 	local error_result=( )
 	local formatted_result=( )
-	local today_timestamp
 	local sorted_result=( )
+	local today_timestamp
 
 	today_timestamp="$(date "+%s")"
 
@@ -156,10 +197,10 @@ main() {
 			full_result+=( "${current_result}" )
 		fi
 		info "Finished processing '${remote_hostname}'"
-	done < "${input_filename}"
+	done < "${CLI_INPUT_FILENAME}"
 
 	if [[ "${#full_result[@]}" -le "0" ]]; then
-		warning "Couldn't process anything from '${input_filename}'"
+		warning "Couldn't process anything from '${CLI_INPUT_FILENAME}'"
 	fi
 
 	if [[ "${#error_result[@]}" -gt "0" ]]; then
@@ -169,7 +210,15 @@ main() {
 	fi
 
 	for result_item in "${full_result[@]}"; do
+		
 		result_item_parts=( ${result_item} )
+		
+		if [[ "${CLI_ONLY_ALERTING}" == "1" ]]; then
+			if [[ "$(( (result_item_parts[2] - today_timestamp) / 86400 ))" -gt "${CLI_ALERT_LIMIT}" ]]; then
+				continue
+			fi
+		fi
+
 		formatted_result+=( "${result_item_parts[0]}	$(date_from_epoch "${result_item_parts[1]}" "+%F %T")	$(date_from_epoch "${result_item_parts[2]}" "+%F %T")	$(( (result_item_parts[2] - today_timestamp) / 86400 ))" )
 	done
 
@@ -177,7 +226,11 @@ main() {
 		sorted_result+=( "${formatted_item}" )
 	done <<< "$( IFS=$'\n' ; echo "${formatted_result[*]}" | sort -n -k6)"
 
-	(IFS=$'\n'; echo "${sorted_result[*]}" | column -t -s$'\t')
+	if [[ "${CLI_ONLY_NAMES}" == "1" ]]; then
+		(IFS=$'\n'; echo "${sorted_result[*]}" | awk '{ print $1 }')
+	else
+		(IFS=$'\n'; echo "${sorted_result[*]}" | column -t -s$'\t')
+	fi
 
 }
 
