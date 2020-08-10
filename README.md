@@ -1,6 +1,6 @@
 # check_certificates
 
-Use this script to automate HTTPS SSL Certificate monitoring. It curl's remote server on 443 port and then verifies remote SSL Certificate's expiration date.
+Use this script to automate HTTPS SSL Certificate monitoring. It curl's remote server on 443 port and then checks remote SSL Certificate expiration date.
 
 # Releases
 
@@ -10,7 +10,14 @@ Latest release: [Download](https://github.com/pavelkim/check_certificates/releas
 
 The script takes on input a file with a list of hostnames:
 ```bash
-./check_certificates.sh input_filename.txt
+./check_certificates.sh [-h] [-v] [-l] [-n] [-A n] -i input_filename
+
+	-i, --input-filename 	 Path to the list of domains to check
+	-l, --only-alerting  	 Show only alerting domains (expiring soon and erroneous)
+	-n, --only-names     	 Show only domain names instead of the full table
+	-A, --alert-limit    	 Set threshold of upcoming expiration alert to n days
+	-v, --verbose        	 Enable debug output
+	-h, --help           	 Enable debug output
 ```
 
 # Input file format
@@ -27,10 +34,18 @@ imaginary-domain-9000.com
 
 Output fields: 
 ```
-Hostname    Valid Not Before    Valid Not After    Expired in N Days
+Hostname    Valid Not Before    Valid Not After    Expires in N Days
 ```
 
-Example outpupt:
+Full output (default) example:
+```
+imaginary-domain-9000.com  error                error                -1
+google.com                 2020-06-30 20:43:12  2020-09-22 20:43:12  66
+example.com                2018-11-28 00:00:00  2020-12-02 12:00:00  136
+mail.com                   2018-01-15 00:00:00  2021-01-14 12:00:00  179
+```
+
+Domain names only output (with parameter `-n`) example:
 ```
 imaginary-domain-9000.com  error                error                -1
 google.com                 2020-06-30 20:43:12  2020-09-22 20:43:12  66
