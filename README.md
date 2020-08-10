@@ -45,12 +45,10 @@ example.com                2018-11-28 00:00:00  2020-12-02 12:00:00  136
 mail.com                   2018-01-15 00:00:00  2021-01-14 12:00:00  179
 ```
 
-Domain names only output (with parameter `-n`) example:
+Domain names only output (with parameters `-n -l -A 90`) example:
 ```
-imaginary-domain-9000.com  error                error                -1
-google.com                 2020-06-30 20:43:12  2020-09-22 20:43:12  66
-example.com                2018-11-28 00:00:00  2020-12-02 12:00:00  136
-mail.com                   2018-01-15 00:00:00  2021-01-14 12:00:00  179
+imaginary-domain-9000.com
+google.com
 ```
 
 # Supported platforms
