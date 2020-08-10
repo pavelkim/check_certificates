@@ -12,14 +12,14 @@ The script takes on input a file with a list of hostnames:
 ```bash
 ./check_certificates.sh [-h] [-v] [-s] [-l] [-n] [-A n] -i input_filename -d domain_name
 
-	-i, --input-filename 	 Path to the list of domains to check
-	-d, --domain         	 Domain name to check
-	-s, --sensor-mode    	 Exit with non-zero if there was something to print out
-	-l, --only-alerting  	 Show only alerting domains (expiring soon and erroneous)
-	-n, --only-names     	 Show only domain names instead of the full table
-	-A, --alert-limit    	 Set threshold of upcoming expiration alert to n days
-	-v, --verbose        	 Enable debug output
-	-h, --help           	 Enable debug output
+   -i, --input-filename 	 Path to the list of domains to check
+   -d, --domain         	 Domain name to check
+   -s, --sensor-mode    	 Exit with non-zero if there was something to print out
+   -l, --only-alerting  	 Show only alerting domains (expiring soon and erroneous)
+   -n, --only-names     	 Show only domain names instead of the full table
+   -A, --alert-limit    	 Set threshold of upcoming expiration alert to n days
+   -v, --verbose        	 Enable debug output
+   -h, --help           	 Enable debug output
 ```
 
 # Input file format
