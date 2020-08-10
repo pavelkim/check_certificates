@@ -15,20 +15,22 @@
 
 set -o pipefail
 
-[[ "${DEBUG}" == "1" ]] && GLOBAL_LOGLEVEL="7" || GLOBAL_LOGLEVEL="0"
-
 VERSION="DEV"
 
 usage() {
 
 	cat << EOF
-SSL Certificate checker v.${VERSION}
-Usage: $0 [-l] [-n] [-A n] -i input_filename
+SSL Certificate checker
+Version: ${VERSION}
+
+Usage: $0 [-h] [-v] [-l] [-n] [-A n] -i input_filename
 
 	-i, --input-filename 	 Path to the list of domains to check
 	-l, --only-alerting  	 Show only alerting domains (expiring soon and erroneous)
 	-n, --only-names     	 Show only domain names instead of the full table
 	-A, --alert-limit    	 Set threshold of upcoming expiration alert to n days
+	-v, --verbose        	 Enable debug output
+	-h, --help           	 Enable debug output
 
 EOF
 
@@ -44,8 +46,7 @@ info() {
 	local self_level=3
 	local self_level_name="info"
 
-	if [[ "${self_level}" -le "${GLOBAL_LOGLEVEL}" ]]
-	then	
+	if [[ "${self_level}" -le "${GLOBAL_LOGLEVEL}" ]]; then	
 		ts="$(timestamp)"
 		echo "[${ts}] [${self_level_name}] [${FUNCNAME[1]}] $msg" >&2
 		return 0
@@ -58,8 +59,7 @@ warning() {
 	local self_level=2
 	local self_level_name="warning"
 
-	if [[ "${self_level}" -le "${GLOBAL_LOGLEVEL}" ]]
-	then	
+	if [[ "${self_level}" -le "${GLOBAL_LOGLEVEL}" ]]; then	
 		ts="$(timestamp)"
 		echo "[${ts}] [${self_level_name}] [${FUNCNAME[1]}] $msg" >&2
 		return 0
@@ -67,56 +67,71 @@ warning() {
 }
 
 date_to_epoch() {
+
+	#
+	# Converts a date string returned by OpenSSL to a Unix timestamp integer
+	#
+
 	local date_from
 
 	[[ ! -z "$1" ]] && date_from="$1" || return 2
 
 	case "$OSTYPE" in
-
-		linux*)
-			date -d "${date_from}" "+%s"
-		;;
-		darwin* ) 
-			date -j -f "%b %d %T %Y %Z" "${date_from}" "+%s"
-		;;
+		linux*)  date -d "${date_from}" "+%s" ;;
+		darwin*) date -j -f "%b %d %T %Y %Z" "${date_from}" "+%s" ;;
 	esac
 }
 
 
-date_from_epoch() {
+epoch_to_date() {
+
+	#
+	# Converts a Unix timestamp integer to a date of a format passed as the second parameter
+	#
+
 	local date_epoch
 	local date_format
 
 	[[ ! -z "$1" ]] && date_epoch="$1" || return 2
-	[[ ! -z "$2" ]] && date_format="$2" || return 2
+	[[ ! -z "$2" ]] && date_format="$2" || date_format="+%F %T"
 
 	case "$OSTYPE" in
-
-		linux*)
-			date -d "@${date_epoch}" "${date_format}"
-		;;
-		darwin* ) 
-			date -j -f "%s" "${date_epoch}" "${date_format}"
-		;;
+		linux*)  date -d "@${date_epoch}" "${date_format}" ;;
+		darwin*) date -j -f "%s" "${date_epoch}" "${date_format}" ;;
 	esac
 }
 
 check_https_certificate_dates() {
 
+	#
+	# Probes remote host for HTTPS, retreives expiration dates and returns them in Unix timestamp format
+	#
+
 	[[ ! -z "$1" ]] && local remote_hostname="$1" || { warning "Remote hostname not set!"; return 100; }
+	[[ ! -z "$2" ]] && local retries="$2" || retries=1
+	[[ ! -z "$3" ]] && local current_retry="$3" || current_retry=1
 	
 	local result
 	local final_result
 	local dates=( )
 	
+	if [[ "${retries}" -gt 1 ]] && [[ "${current_retry}" -le "${retries}" ]]; then
+		info "Retry #${current_retry} of ${retries} (Not implemented yet)"
+		current_retry=$(( current_retry + 1 ))
+		return 1
+	fi
+
 	info "Starting https ssl certificate validation for ${remote_hostname}"
 	result="$( echo | openssl s_client -servername "${remote_hostname}" -connect "${remote_hostname}:443" 2>/dev/null | openssl x509 -noout -dates 2>/dev/null | cut -d"=" -f2  )"
 	RC=$?
 	
 	if [[ "${RC}" != "0" ]]; then
+
 		warning "Can't process openssl output for ${remote_hostname}"
 		final_result="${remote_hostname} error error"
+
 	else
+
 		while read line; do
 			dates+=( "${line}" )
 		done <<< "${result}"
@@ -136,7 +151,7 @@ _required_cli_parameter() {
 	local parameter_name
 	local parameter_description
 
-	[[ ! -z "${1}" ]] && parameter_name="${1}" || { echo "Error: Parameter name not set."; exit 2; }
+	[[ ! -z "${1}" ]] && parameter_name="${1}" || { echo "Error: Parameter name not set." >&2; exit 2; }
 	[[ ! -z "${2}" ]] && parameter_description="${2}" || parameter_description=""
 
 	if [[ -z "${!parameter_name}" ]]; then
@@ -154,8 +169,8 @@ main() {
 	local CLI_ONLY_ALERTING=0
 	local CLI_ALERT_LIMIT=7
 	local CLI_ONLY_NAMES=0
-	local CLI_RETRIES
-	local CLI_VERBOSE
+	local CLI_RETRIES=2
+	local CLI_VERBOSE=0
 
 	while [[ "$#" -gt 0 ]]; do 
 		case "${1}" in
@@ -173,6 +188,7 @@ main() {
 	_required_cli_parameter CLI_INPUT_FILENAME "Input filename"
 	[[ -f "${CLI_INPUT_FILENAME}" ]] || { echo "Can't open input file: '${CLI_INPUT_FILENAME}'"; exit 2; }
 
+	[[ "${CLI_VERBOSE}" == "1" ]] && GLOBAL_LOGLEVEL=7 || GLOBAL_LOGLEVEL=0
 
 	local full_result=( )
 	local error_result=( )
@@ -219,7 +235,7 @@ main() {
 			fi
 		fi
 
-		formatted_result+=( "${result_item_parts[0]}	$(date_from_epoch "${result_item_parts[1]}" "+%F %T")	$(date_from_epoch "${result_item_parts[2]}" "+%F %T")	$(( (result_item_parts[2] - today_timestamp) / 86400 ))" )
+		formatted_result+=( "${result_item_parts[0]}	$(epoch_to_date "${result_item_parts[1]}" "+%F %T")	$(epoch_to_date "${result_item_parts[2]}" "+%F %T")	$(( (result_item_parts[2] - today_timestamp) / 86400 ))" )
 	done
 
 	while read formatted_item; do
