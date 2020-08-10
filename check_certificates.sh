@@ -234,7 +234,8 @@ main() {
 	fi
 
 	if [[ ! -z "${CLI_INPUT_FILENAME}" ]]; then
-		[[ -f "${CLI_INPUT_FILENAME}" ]] || error "Can't open input file: '${CLI_INPUT_FILENAME}'"	
+		[[ -f "${CLI_INPUT_FILENAME}" ]] || error "Can't open input file: '${CLI_INPUT_FILENAME}'"
+		input_filename="${CLI_INPUT_FILENAME}"
 
 	elif [[ ! -z "${CLI_INPUT_DOMAIN}" ]]; then
 		input_filename="$(mktemp)"
