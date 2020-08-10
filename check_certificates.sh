@@ -23,9 +23,11 @@ usage() {
 SSL Certificate checker
 Version: ${VERSION}
 
-Usage: $0 [-h] [-v] [-l] [-n] [-A n] -i input_filename
+Usage: $0 [-h] [-v] [-s] [-l] [-n] [-A n] -i input_filename -d domain_name
 
 	-i, --input-filename 	 Path to the list of domains to check
+	-d, --domain         	 Domain name to check
+	-s, --sensor-mode    	 Exit with non-zero if there was something to print out
 	-l, --only-alerting  	 Show only alerting domains (expiring soon and erroneous)
 	-n, --only-names     	 Show only domain names instead of the full table
 	-A, --alert-limit    	 Set threshold of upcoming expiration alert to n days
@@ -40,6 +42,15 @@ timestamp() {
 	date "+%F %T"
 }
 
+error() {
+        
+        [[ ! -z "${1}" ]] && msg="ERROR: ${1}" || msg="ERROR!"
+        [[ ! -z "${2}" ]] && rc="${2}" || rc=1
+        
+        echo "[$(timestamp)] ${BASH_SOURCE[1]}: line ${BASH_LINENO[0]}: ${FUNCNAME[1]}: ${msg}" >&2
+        exit "${rc}"
+}
+
 info() {
 
 	local msg="$1"
@@ -47,8 +58,7 @@ info() {
 	local self_level_name="info"
 
 	if [[ "${self_level}" -le "${GLOBAL_LOGLEVEL}" ]]; then	
-		ts="$(timestamp)"
-		echo "[${ts}] [${self_level_name}] [${FUNCNAME[1]}] $msg" >&2
+		echo "[$(timestamp)] [${self_level_name}] [${FUNCNAME[1]}] $msg" >&2
 		return 0
 	fi
 }
@@ -60,8 +70,7 @@ warning() {
 	local self_level_name="warning"
 
 	if [[ "${self_level}" -le "${GLOBAL_LOGLEVEL}" ]]; then	
-		ts="$(timestamp)"
-		echo "[${ts}] [${self_level_name}] [${FUNCNAME[1]}] $msg" >&2
+		echo "[$(timestamp)] [${self_level_name}] [${FUNCNAME[1]}] $msg" >&2
 		return 0
 	fi
 }
@@ -107,14 +116,17 @@ check_https_certificate_dates() {
 	# Probes remote host for HTTPS, retreives expiration dates and returns them in Unix timestamp format
 	#
 
-	[[ ! -z "$1" ]] && local remote_hostname="$1" || { warning "Remote hostname not set!"; return 100; }
-	[[ ! -z "$2" ]] && local retries="$2" || retries=1
-	[[ ! -z "$3" ]] && local current_retry="$3" || current_retry=1
-	
+	local remote_hostname
+	local retries
+	local current_retry
 	local result
 	local final_result
 	local dates=( )
-	
+
+	[[ ! -z "$1" ]] && remote_hostname="$1" || error "Remote hostname not set!"
+	[[ ! -z "$2" ]] && retries="$2" || retries=1
+	[[ ! -z "$3" ]] && current_retry="$3" || current_retry=1
+
 	if [[ "${retries}" -gt 1 ]] && [[ "${current_retry}" -le "${retries}" ]]; then
 		info "Retry #${current_retry} of ${retries} (Not implemented yet)"
 		current_retry=$(( current_retry + 1 ))
@@ -151,12 +163,11 @@ _required_cli_parameter() {
 	local parameter_name
 	local parameter_description
 
-	[[ ! -z "${1}" ]] && parameter_name="${1}" || { echo "Error: Parameter name not set." >&2; exit 2; }
+	[[ ! -z "${1}" ]] && parameter_name="${1}" || error "Parameter name not set." 
 	[[ ! -z "${2}" ]] && parameter_description="${2}" || parameter_description=""
 
 	if [[ -z "${!parameter_name}" ]]; then
-		echo "Required parameter: ${parameter_description:-$parameter_name}"
-		exit 1
+		error "Required parameter: ${parameter_description:-$parameter_name}"
 	else
 		return 0
 	fi
@@ -166,35 +177,70 @@ _required_cli_parameter() {
 main() {
 
 	local CLI_INPUT_FILENAME
-	local CLI_ONLY_ALERTING=0
-	local CLI_ALERT_LIMIT=7
-	local CLI_ONLY_NAMES=0
-	local CLI_RETRIES=2
-	local CLI_VERBOSE=0
-
-	while [[ "$#" -gt 0 ]]; do 
-		case "${1}" in
-			-i|--input-filename)	CLI_INPUT_FILENAME="${2}"; shift; shift;;
-			-l|--only-alerting)	CLI_ONLY_ALERTING=1; shift;;
-			-n|--only-names)	CLI_ONLY_NAMES=1; shift;;
-			-A|--alert-limit)	CLI_ALERT_LIMIT="${2}"; shift; shift;;
-			-R|--retries)	CLI_RETRIES="${2}"; shift; shift;;
-			-v|--verbose)	CLI_VERBOSE=1;shift;;
-			-h|--help) usage; exit 0;;
-			*) usage "Unknown parameter passed: '${1}'"; shift; shift;;
-		esac; 
-	done
-
-	_required_cli_parameter CLI_INPUT_FILENAME "Input filename"
-	[[ -f "${CLI_INPUT_FILENAME}" ]] || { echo "Can't open input file: '${CLI_INPUT_FILENAME}'"; exit 2; }
-
-	[[ "${CLI_VERBOSE}" == "1" ]] && GLOBAL_LOGLEVEL=7 || GLOBAL_LOGLEVEL=0
+	local CLI_INPUT_DOMAIN
+	local CLI_ONLY_ALERTING
+	local CLI_ALERT_LIMIT
+	local CLI_ONLY_NAMES
+	local CLI_SENSOR_MODE
+	local CLI_RETRIES
+	local CLI_VERBOSE
 
 	local full_result=( )
 	local error_result=( )
 	local formatted_result=( )
 	local sorted_result=( )
 	local today_timestamp
+	local input_filename
+
+	while [[ "$#" -gt 0 ]]; do 
+		case "${1}" in
+			-i|--input-filename)
+				[[ -z "${CLI_INPUT_FILENAME}" ]] && CLI_INPUT_FILENAME="${2}" || error "Argument already set: -i"; shift; shift;;
+
+			-d|--domain)
+				[[ -z "${CLI_INPUT_DOMAIN}" ]] && CLI_INPUT_DOMAIN="${2}" || error "Argument already set: -d"; shift; shift;;
+
+			-s|--sensor-mode)
+				[[ -z "${CLI_SENSOR_MODE}" ]] && CLI_SENSOR_MODE=1 || error "Parameter already set: -s"; shift;;
+
+			-l|--only-alerting)
+				[[ -z "${CLI_ONLY_ALERTING}" ]] && CLI_ONLY_ALERTING=1 || error "Parameter already set: -l"; shift;;
+
+			-n|--only-names)
+				[[ -z "${CLI_ONLY_NAMES}" ]] && CLI_ONLY_NAMES=1 || error "Parameter already set: -n"; shift;;
+
+			-A|--alert-limit)
+				[[ -z "${CLI_ALERT_LIMIT}" ]] && CLI_ALERT_LIMIT="${2}" || error "Argument already set: -A"; shift; shift;;
+
+			-R|--retries)
+				[[ -z "${CLI_RETRIES}" ]] && CLI_RETRIES="${2}" || error "Argument already set: -R"; shift; shift;;
+
+			-v|--verbose)
+				[[ -z "${CLI_VERBOSE}" ]] && CLI_VERBOSE=1 || error "Parameter already set: -v"; shift;;
+
+			-h|--help) usage; exit 0;;
+			
+			*) error "Unknown parameter passed: '${1}'"; shift; shift;;
+		esac; 
+	done
+
+	[[ "${CLI_VERBOSE}" == "1" ]] && GLOBAL_LOGLEVEL=7 || GLOBAL_LOGLEVEL=0
+	[[ -z "${CLI_ALERT_LIMIT}" ]] && CLI_ALERT_LIMIT=7
+
+	if [[ -z "${CLI_INPUT_FILENAME}" ]] && [[ -z "${CLI_INPUT_DOMAIN}" ]]; then
+		error "Error! Specify one of these: input file or domain"
+	elif [[ ! -z "${CLI_INPUT_FILENAME}" ]] && [[ ! -z "${CLI_INPUT_DOMAIN}" ]]; then
+		error "Error! Only one parameter is allowed: input file or domain"
+	fi
+
+	if [[ ! -z "${CLI_INPUT_FILENAME}" ]]; then
+		[[ -f "${CLI_INPUT_FILENAME}" ]] || error "Can't open input file: '${CLI_INPUT_FILENAME}'"
+		input_filename="${CLI_INPUT_FILENAME}"
+
+	elif [[ ! -z "${CLI_INPUT_DOMAIN}" ]]; then
+		input_filename="$(mktemp)"
+		echo "${CLI_INPUT_DOMAIN}" > "${input_filename}"
+	fi
 
 	today_timestamp="$(date "+%s")"
 
@@ -213,10 +259,10 @@ main() {
 			full_result+=( "${current_result}" )
 		fi
 		info "Finished processing '${remote_hostname}'"
-	done < "${CLI_INPUT_FILENAME}"
+	done < "${input_filename}"
 
 	if [[ "${#full_result[@]}" -le "0" ]]; then
-		warning "Couldn't process anything from '${CLI_INPUT_FILENAME}'"
+		warning "Couldn't process anything from '${input_filename}'"
 	fi
 
 	if [[ "${#error_result[@]}" -gt "0" ]]; then
@@ -231,6 +277,7 @@ main() {
 		
 		if [[ "${CLI_ONLY_ALERTING}" == "1" ]]; then
 			if [[ "$(( (result_item_parts[2] - today_timestamp) / 86400 ))" -gt "${CLI_ALERT_LIMIT}" ]]; then
+				info "Certificate on ${result_item_parts[0]} expiring later than alert limit (${CLI_ALERT_LIMIT} day(s))."
 				continue
 			fi
 		fi
@@ -246,6 +293,10 @@ main() {
 		(IFS=$'\n'; echo "${sorted_result[*]}" | awk '{ print $1 }')
 	else
 		(IFS=$'\n'; echo "${sorted_result[*]}" | column -t -s$'\t')
+	fi
+
+	if [[ "${CLI_SENSOR_MODE}" == "1" ]] && [[ "${#formatted_result[@]}" -gt 0 ]]; then
+		exit 1
 	fi
 
 }
