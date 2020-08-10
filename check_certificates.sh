@@ -2,16 +2,6 @@
 #
 # Checks if SSL Certificate on https server is valid.
 #
-# Input file format:
-#  domain1.com
-#  domain2.com
-#  domain3.com
-# 
-# Result output format:
-#  domain1.com  error                error                -1
-#  domain2.com  2013-10-31 00:00:00  2016-10-30 23:59:59  92
-#  domain2.com  2015-12-03 00:00:00  2016-12-02 23:59:59  125
-#
 
 set -o pipefail
 
@@ -25,14 +15,14 @@ Version: ${VERSION}
 
 Usage: $0 [-h] [-v] [-s] [-l] [-n] [-A n] -i input_filename -d domain_name
 
-	-i, --input-filename 	 Path to the list of domains to check
-	-d, --domain         	 Domain name to check
-	-s, --sensor-mode    	 Exit with non-zero if there was something to print out
-	-l, --only-alerting  	 Show only alerting domains (expiring soon and erroneous)
-	-n, --only-names     	 Show only domain names instead of the full table
-	-A, --alert-limit    	 Set threshold of upcoming expiration alert to n days
-	-v, --verbose        	 Enable debug output
-	-h, --help           	 Enable debug output
+   -i, --input-filename 	 Path to the list of domains to check
+   -d, --domain         	 Domain name to check
+   -s, --sensor-mode    	 Exit with non-zero if there was something to print out
+   -l, --only-alerting  	 Show only alerting domains (expiring soon and erroneous)
+   -n, --only-names     	 Show only domain names instead of the full table
+   -A, --alert-limit    	 Set threshold of upcoming expiration alert to n days
+   -v, --verbose        	 Enable debug output
+   -h, --help           	 Enable debug output
 
 EOF
 
