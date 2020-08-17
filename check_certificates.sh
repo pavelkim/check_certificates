@@ -153,7 +153,7 @@ _required_cli_parameter() {
 	local parameter_name
 	local parameter_description
 
-	[[ ! -z "${1}" ]] && parameter_name="${1}" || error "Parameter name not set." 
+	[[ ! -z "${1}" ]] && parameter_name="${1}" || error "Parameter 'name' not set." 
 	[[ ! -z "${2}" ]] && parameter_description="${2}" || parameter_description=""
 
 	if [[ -z "${!parameter_name}" ]]; then
