@@ -25,7 +25,7 @@ jobs:
       run: echo "${{steps.readversionfile.outputs.desiredversion}}"
 
     - name: Test run
-      run: bash check_certificates.sh -i test/inputfile.txt
+      run: bash check_certificates.sh -i test/inputfile.txt --only-alerting --alert-limit 5
 
     - name: Lookup planned tag
       id: tagexists

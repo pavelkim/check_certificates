@@ -7,22 +7,25 @@ set -o pipefail
 
 VERSION="DEV"
 
+[[ -f ".config" ]] && source .config || :
+
 usage() {
 
 	cat << EOF
 SSL Certificate checker
 Version: ${VERSION}
 
-Usage: $0 [-h] [-v] [-s] [-l] [-n] [-A n] -i input_filename -d domain_name
+Usage: $0 [-h] [-v] [-s] [-l] [-n] [-A n] -i input_filename -d domain_name -b backend_name
 
-   -i, --input-filename 	 Path to the list of domains to check
-   -d, --domain         	 Domain name to check
-   -s, --sensor-mode    	 Exit with non-zero if there was something to print out
-   -l, --only-alerting  	 Show only alerting domains (expiring soon and erroneous)
-   -n, --only-names     	 Show only domain names instead of the full table
-   -A, --alert-limit    	 Set threshold of upcoming expiration alert to n days
-   -v, --verbose        	 Enable debug output
-   -h, --help           	 Enable debug output
+   -b, --backend-name       Domain list backend name (pastebin, gcs, etc.)
+   -i, --input-filename     Path to the list of domains to check
+   -d, --domain             Domain name to check
+   -s, --sensor-mode        Exit with non-zero if there was something to print out
+   -l, --only-alerting      Show only alerting domains (expiring soon and erroneous)
+   -n, --only-names         Show only domain names instead of the full table
+   -A, --alert-limit        Set threshold of upcoming expiration alert to n days
+   -v, --verbose            Enable debug output
+   -h, --help               Enable debug output
 
 EOF
 
@@ -100,6 +103,42 @@ epoch_to_date() {
 	esac
 }
 
+backend_read_pastebin() {
+
+	[[ -z "${PASTEBIN_USERKEY}" ]] && error "PASTEBIN_USERKEY not set!"
+	[[ -z "${PASTEBIN_DEVKEY}" ]] && error "PASTEBIN_DEVKEY not set!"
+	[[ -z "${PASTEBIN_PASTEID}" ]] && error "PASTEBIN_PASTEID not set!"
+
+	local pastebin_api_endpoint
+	local pastebin_api_payload
+	local pastebin_dataset_filter
+	local result_filename
+
+	[[ ! -z "$1" ]] && result_filename="$1" || error "Result file not set!"
+
+	pastebin_api_endpoint="https://pastebin.com/api/api_raw.php"
+	pastebin_api_payload="api_option=show_paste&api_user_key=${PASTEBIN_USERKEY}&api_dev_key=${PASTEBIN_DEVKEY}&api_paste_key=${PASTEBIN_PASTEID}"
+	pastebin_dataset_filter=".check_ssl[]"
+
+	curl -X POST -s "${pastebin_api_endpoint}" --data "${pastebin_api_payload}" | jq -r "${pastebin_dataset_filter}" > "${result_filename}"
+
+}
+
+backend_read() {
+
+	local backend_name
+	local result_filename
+	local backend_read_function
+
+	[[ ! -z "$1" ]] && backend_name="$1" || error "Backend name not set!"
+	[[ ! -z "$2" ]] && result_filename="$2" || error "Result file not set!"
+
+	backend_read_function="backend_read_${backend_name}"
+	
+	eval "${backend_read_function}" "${result_filename}" > "${result_filename}"
+
+}
+
 check_https_certificate_dates() {
 
 	#
@@ -166,6 +205,7 @@ _required_cli_parameter() {
 
 main() {
 
+	local CLI_BACKEND_NAME
 	local CLI_INPUT_FILENAME
 	local CLI_INPUT_DOMAIN
 	local CLI_ONLY_ALERTING
@@ -184,6 +224,9 @@ main() {
 
 	while [[ "$#" -gt 0 ]]; do 
 		case "${1}" in
+			-b|--backend-name)
+				[[ -z "${CLI_BACKEND_NAME}" ]] && CLI_BACKEND_NAME="${2}" || error "Argument already set: -b"; shift; shift;;
+
 			-i|--input-filename)
 				[[ -z "${CLI_INPUT_FILENAME}" ]] && CLI_INPUT_FILENAME="${2}" || error "Argument already set: -i"; shift; shift;;
 
@@ -217,8 +260,8 @@ main() {
 	[[ "${CLI_VERBOSE}" == "1" ]] && GLOBAL_LOGLEVEL=7 || GLOBAL_LOGLEVEL=0
 	[[ -z "${CLI_ALERT_LIMIT}" ]] && CLI_ALERT_LIMIT=7
 
-	if [[ -z "${CLI_INPUT_FILENAME}" ]] && [[ -z "${CLI_INPUT_DOMAIN}" ]]; then
-		error "Error! Specify one of these: input file or domain"
+	if [[ -z "${CLI_INPUT_FILENAME}" ]] && [[ -z "${CLI_INPUT_DOMAIN}" ]] && [[ -z "${CLI_BACKEND_NAME}" ]]; then
+		error "Error! Specify one of these: input file, domain, domain backend"
 	elif [[ ! -z "${CLI_INPUT_FILENAME}" ]] && [[ ! -z "${CLI_INPUT_DOMAIN}" ]]; then
 		error "Error! Only one parameter is allowed: input file or domain"
 	fi
@@ -230,6 +273,10 @@ main() {
 	elif [[ ! -z "${CLI_INPUT_DOMAIN}" ]]; then
 		input_filename="$(mktemp)"
 		echo "${CLI_INPUT_DOMAIN}" > "${input_filename}"
+
+	elif [[ ! -z "${CLI_BACKEND_NAME}" ]]; then
+		input_filename="$(mktemp)"
+		backend_read "${CLI_BACKEND_NAME}" "${input_filename}"
 	fi
 
 	today_timestamp="$(date "+%s")"

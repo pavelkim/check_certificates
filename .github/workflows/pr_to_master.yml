@@ -25,7 +25,7 @@ jobs:
       run: echo "${{steps.readversionfile.outputs.desiredversion}}"
 
     - name: Test run
-      run: bash check_certificates.sh -i test/inputfile.txt | tee test_run_result.txt
+      run: bash check_certificates.sh -i test/inputfile.txt --only-alerting --alert-limit 5 | tee test_run_result.txt
 
     - name: Test run results verification
       run: diff -u test_run_result.txt test/expected_result.txt
