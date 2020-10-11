@@ -29,16 +29,17 @@ Domain list backends allow you to manage configuration in a centralised manner.
 
 ## PasteBin
 
-You can use a PasteBin paste as a source of domain names to be checked. 
+You can use a PasteBin paste as a source of domain names to be checked. We encorage you to register on PasteBin and create all your pastes related to `check_certificates` as Private or at least as Unlisted.
 
-1. Create a paste with a valid structure
+1. Create a paste with a valid structure [example](https://pastebin.com/FJFvdiPg)
 1. Obtain devkey and userkey ([documentation](https://pastebin.com/doc_api#7))
 1. Fill out variables in `.config` file
 
 ### Paste structure
 
 ```json
-{ "check_ssl": [ 
+{ 
+  "check_ssl": [ 
     "example.com",
     "google.com",
     "mail.com",
