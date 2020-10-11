@@ -10,16 +10,49 @@ Latest release: [Download](https://github.com/pavelkim/check_certificates/releas
 
 The script takes on input a file with a list of hostnames:
 ```bash
-./check_certificates.sh [-h] [-v] [-s] [-l] [-n] [-A n] -i input_filename -d domain_name
+Usage: check_certificates.sh [-h] [-v] [-s] [-l] [-n] [-A n] -i input_filename -d domain_name -b backend_name
 
-   -i, --input-filename 	 Path to the list of domains to check
-   -d, --domain         	 Domain name to check
-   -s, --sensor-mode    	 Exit with non-zero if there was something to print out
-   -l, --only-alerting  	 Show only alerting domains (expiring soon and erroneous)
-   -n, --only-names     	 Show only domain names instead of the full table
-   -A, --alert-limit    	 Set threshold of upcoming expiration alert to n days
-   -v, --verbose        	 Enable debug output
-   -h, --help           	 Enable debug output
+   -b, --backend-name       Domain list backend name (pastebin, gcs, etc.)
+   -i, --input-filename     Path to the list of domains to check
+   -d, --domain             Domain name to check
+   -s, --sensor-mode        Exit with non-zero if there was something to print out
+   -l, --only-alerting      Show only alerting domains (expiring soon and erroneous)
+   -n, --only-names         Show only domain names instead of the full table
+   -A, --alert-limit        Set threshold of upcoming expiration alert to n days
+   -v, --verbose            Enable debug output
+   -h, --help               Enable debug output
+```
+
+# Supported domain list backends
+
+Domain list backends allow you to manage configuration in a centralised manner.
+
+## PasteBin
+
+You can use a PasteBin paste as a source of domain names to be checked. 
+
+1. Create a paste with a valid structure
+1. Obtain devkey and userkey ([documentation](https://pastebin.com/doc_api#7))
+1. Fill out variables in `.config` file
+
+### Paste structure
+
+```json
+{ "check_ssl": [ 
+    "example.com",
+    "google.com",
+    "mail.com",
+    "imaginary-domain-9000.com"
+  ]
+}
+```
+
+### .config file variables
+
+```bash
+PASTEBIN_USERKEY=youruserkey
+PASTEBIN_DEVKEY=yourdevkey
+PASTEBIN_PASTEID=pasteid
 ```
 
 # Input file format
