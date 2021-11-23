@@ -110,6 +110,62 @@ check_certificates_expiration{domain="example.de"} 193
 check_certificates_expiration{domain="imaginary-domain-9000.com"} -1
 ```
 
+## nginx configuration example
+
+```nginx
+server {
+
+    listen 127.0.0.1:80;
+    listen [::1]:80;
+
+    listen 127.0.0.1:443 ssl;
+    listen [::1]:443 ssl;
+
+    ssl_certificate /etc/pki/tls/certs/localhost.crt;
+    ssl_certificate_key /etc/pki/tls/private/localhost.key;
+
+    server_name localhost;
+
+    access_log  /var/log/nginx/localhost-access.log  main;
+    error_log  /var/log/nginx/localhost-error.log;
+
+    location /metrics {
+        alias /opt/check_certificates/metrics;
+        allow 127.0.0.1/32;
+        deny  all;
+    }
+
+}
+```
+
+## prometheus.yml example
+
+
+```yaml
+global:
+  scrape_interval:     30s
+
+scrape_configs:
+
+  - job_name: 'check_certificates'
+    scrape_interval: 1h
+    scheme: https
+    metrics_path: "check_certificates/metrics"
+    params:
+      format: ['prometheus']
+    static_configs:
+      - targets: ['marge.0123e.ru']
+
+```
+
+## Grafana dashboard
+
+Dashboard can be imported by id `15298`.
+
+More informatin: https://grafana.com/grafana/dashboards/15298
+
+![Grafana dashboard screenshot](https://grafana.com/api/dashboards/15298/images/11337/image)
+
 # Application examples
 
 ## Monitoring in Cron
@@ -140,5 +196,6 @@ The script executed as displayed above will return 0 in case if `example.com` ha
 # Supported platforms
 
 Currently tested on the following platforms:
+1. CentOS 7, bash 4.2.46, openssl 1.0.2k
 1. CentOS 8, bash 4.4.19, openssl 1.1.1c
 2. Mac OS 10.13.6, bash 3.2.57, openssl 1.1.1d
