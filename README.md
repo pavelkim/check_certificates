@@ -196,5 +196,6 @@ The script executed as displayed above will return 0 in case if `example.com` ha
 # Supported platforms
 
 Currently tested on the following platforms:
+1. CentOS 7, bash 4.2.46, openssl 1.0.2k
 1. CentOS 8, bash 4.4.19, openssl 1.1.1c
 2. Mac OS 10.13.6, bash 3.2.57, openssl 1.1.1d
