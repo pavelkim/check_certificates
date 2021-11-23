@@ -136,8 +136,35 @@ server {
     }
 
 }
+```
+
+## prometheus.yml example
+
+
+```yaml
+global:
+  scrape_interval:     30s
+
+scrape_configs:
+
+  - job_name: 'check_certificates'
+    scrape_interval: 1h
+    scheme: https
+    metrics_path: "check_certificates/metrics"
+    params:
+      format: ['prometheus']
+    static_configs:
+      - targets: ['marge.0123e.ru']
 
 ```
+
+## Grafana dashboard
+
+Dashboard can be imported by id `15298`.
+
+More informatin: https://grafana.com/grafana/dashboards/15298
+
+![Grafana dashboard screenshot](https://grafana.com/api/dashboards/15298/images/11337/image)
 
 # Application examples
 
