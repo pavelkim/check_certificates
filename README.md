@@ -110,6 +110,35 @@ check_certificates_expiration{domain="example.de"} 193
 check_certificates_expiration{domain="imaginary-domain-9000.com"} -1
 ```
 
+## nginx configuration example
+
+```nginx
+server {
+
+    listen 127.0.0.1:80;
+    listen [::1]:80;
+
+    listen 127.0.0.1:443 ssl;
+    listen [::1]:443 ssl;
+
+    ssl_certificate /etc/pki/tls/certs/localhost.crt;
+    ssl_certificate_key /etc/pki/tls/private/localhost.key;
+
+    server_name localhost;
+
+    access_log  /var/log/nginx/localhost-access.log  main;
+    error_log  /var/log/nginx/localhost-error.log;
+
+    location /metrics {
+        alias /opt/check_certificates/metrics;
+        allow 127.0.0.1/32;
+        deny  all;
+    }
+
+}
+
+```
+
 # Application examples
 
 ## Monitoring in Cron
