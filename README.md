@@ -154,7 +154,7 @@ scrape_configs:
     params:
       format: ['prometheus']
     static_configs:
-      - targets: ['marge.0123e.ru']
+      - targets: ['localhost']
 
 ```
 
