@@ -10,7 +10,7 @@ Latest release: [Download](https://github.com/pavelkim/check_certificates/releas
 
 The script takes on input a file with a list of hostnames:
 ```bash
-Usage: check_certificates.sh [-h] [-v] [-s] [-l] [-n] [-A n] -i input_filename -d domain_name -b backend_name
+Usage: check_certificates.sh [-h] [-v] [-s] [-l] [-n] [-A n] [-G] -i input_filename -d domain_name -b backend_name
 
    -b, --backend-name       Domain list backend name (pastebin, gcs, etc.)
    -i, --input-filename     Path to the list of domains to check
@@ -19,19 +19,20 @@ Usage: check_certificates.sh [-h] [-v] [-s] [-l] [-n] [-A n] -i input_filename -
    -l, --only-alerting      Show only alerting domains (expiring soon and erroneous)
    -n, --only-names         Show only domain names instead of the full table
    -A, --alert-limit        Set threshold of upcoming expiration alert to n days
+   -G, --generate-metrics   Generates a Prometheus metrics file to be served by nginx
    -v, --verbose            Enable debug output
-   -h, --help               Enable debug output
+   -h, --help               Show help
 ```
 
 # Supported domain list backends
 
 Domain list backends allow you to manage configuration in a centralised manner.
 
-## PasteBin
+## PasteBin source
 
 You can use a PasteBin paste as a source of domain names to be checked. We encorage you to register on PasteBin and create all your pastes related to `check_certificates` as Private or at least as Unlisted.
 
-1. Create a paste with a valid structure [example](https://pastebin.com/FJFvdiPg)
+1. Create a paste with a valid structure ([example](https://pastebin.com/FJFvdiPg))
 1. Obtain devkey and userkey ([documentation](https://pastebin.com/doc_api#7))
 1. Fill out variables in `.config` file
 
@@ -85,6 +86,28 @@ Domain names only output (with parameters `-n -l -A 90`) example:
 ```
 imaginary-domain-9000.com
 google.com
+```
+
+# Prometheus metrics
+
+The script can generate a file with Prometheus metrics that is to be served by an external web server (eg. nginx or httpd).
+
+Use `-G` or `--generate-metrics` parameters to enable this feature.
+
+## .config file variables
+
+```bash
+PROMETHEUS_EXPORT_FILENAME="/path/to/htdocs/metrics"
+```
+
+## Metrics example
+
+```prometheus
+# HELP check_certificates_expiration Days until HTTPs SSL certificate expires (skipped on error)
+# TYPE check_certificates_expiration counter
+check_certificates_expiration{domain="example.com"} 20
+check_certificates_expiration{domain="example.de"} 193
+check_certificates_expiration{domain="imaginary-domain-9000.com"} -1
 ```
 
 # Application examples
