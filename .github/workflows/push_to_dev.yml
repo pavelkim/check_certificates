@@ -25,7 +25,9 @@ jobs:
       run: echo "${{steps.readversionfile.outputs.desiredversion}}"
 
     - name: Test run
-      run: bash check_certificates.sh -i test/inputfile.txt --only-alerting --alert-limit 5
+      run: |
+        export PROMETHEUS_EXPORT_FILENAME="./metrics"
+        bash check_certificates.sh -G -i test/inputfile.txt --only-alerting --alert-limit 5
 
     - name: Lookup planned tag
       id: tagexists

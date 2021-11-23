@@ -6,6 +6,7 @@
 set -o pipefail
 
 VERSION="DEV"
+TODAY_TIMESTAMP="$(date "+%s")"
 
 [[ -f ".config" ]] && source .config || :
 
@@ -15,7 +16,7 @@ usage() {
 SSL Certificate checker
 Version: ${VERSION}
 
-Usage: $0 [-h] [-v] [-s] [-l] [-n] [-A n] -i input_filename -d domain_name -b backend_name
+Usage: $0 [-h] [-v] [-s] [-l] [-n] [-A n] [-G] -i input_filename -d domain_name -b backend_name
 
    -b, --backend-name       Domain list backend name (pastebin, gcs, etc.)
    -i, --input-filename     Path to the list of domains to check
@@ -24,8 +25,9 @@ Usage: $0 [-h] [-v] [-s] [-l] [-n] [-A n] -i input_filename -d domain_name -b ba
    -l, --only-alerting      Show only alerting domains (expiring soon and erroneous)
    -n, --only-names         Show only domain names instead of the full table
    -A, --alert-limit        Set threshold of upcoming expiration alert to n days
+   -G, --generate-metrics   Generates a Prometheus metrics file to be served by nginx
    -v, --verbose            Enable debug output
-   -h, --help               Enable debug output
+   -h, --help               Show help
 
 EOF
 
@@ -36,10 +38,10 @@ timestamp() {
 }
 
 error() {
-        
+
         [[ ! -z "${1}" ]] && msg="ERROR: ${1}" || msg="ERROR!"
         [[ ! -z "${2}" ]] && rc="${2}" || rc=1
-        
+
         echo "[$(timestamp)] ${BASH_SOURCE[1]}: line ${BASH_LINENO[0]}: ${FUNCNAME[1]}: ${msg}" >&2
         exit "${rc}"
 }
@@ -121,6 +123,32 @@ backend_read_pastebin() {
 	pastebin_dataset_filter=".check_ssl[]"
 
 	curl -X POST -s "${pastebin_api_endpoint}" --data "${pastebin_api_payload}" | jq -r "${pastebin_dataset_filter}" > "${result_filename}"
+
+}
+
+generate_prometheus_metrics() {
+
+	[[ -z "${PROMETHEUS_EXPORT_FILENAME}" ]] && error "PROMETHEUS_EXPORT_FILENAME not set!"
+	[[ -z "${TODAY_TIMESTAMP}" ]] && error "TODAY_TIMESTAMP not set!"
+
+	local metrics_name='check_certificates_expiration'
+
+	[[ ! -z "$*" ]] && full_result=( "$@" ) || error "Formatted result list not set!"
+
+	info "Exporting Prometheus metrics into file '${PROMETHEUS_EXPORT_FILENAME}'"
+
+	info "Writing Prometheus metrics header (overwriting)"
+	echo "# HELP check_certificates_expiration Days until HTTPs SSL certificate expires (skipped on error)" > "${PROMETHEUS_EXPORT_FILENAME}"
+	echo "# TYPE check_certificates_expiration counter" >> "${PROMETHEUS_EXPORT_FILENAME}"
+
+	for full_result_item in "${full_result[@]}"; do
+		full_result_item_parts=( ${full_result_item} )
+		metrics_item="${metrics_name}{domain=\"${full_result_item_parts[0]}\"} $(( (${full_result_item_parts[2]} - ${TODAY_TIMESTAMP}) / 86400 ))"
+		info "Writing metrics item '${metrics_item}'"
+		echo "${metrics_item}" >> "${PROMETHEUS_EXPORT_FILENAME}"
+	done
+
+	info "Finished Prometheus metrics export"
 
 }
 
@@ -212,6 +240,7 @@ main() {
 	local CLI_ALERT_LIMIT
 	local CLI_ONLY_NAMES
 	local CLI_SENSOR_MODE
+	local CLI_GENERATE_METRICS
 	local CLI_RETRIES
 	local CLI_VERBOSE
 
@@ -219,8 +248,8 @@ main() {
 	local error_result=( )
 	local formatted_result=( )
 	local sorted_result=( )
-	local today_timestamp
 	local input_filename
+	local formatted_result_item
 
 	while [[ "$#" -gt 0 ]]; do 
 		case "${1}" in
@@ -245,6 +274,9 @@ main() {
 			-A|--alert-limit)
 				[[ -z "${CLI_ALERT_LIMIT}" ]] && CLI_ALERT_LIMIT="${2}" || error "Argument already set: -A"; shift; shift;;
 
+			-G|--generate-metrics)
+				[[ -z "${CLI_GENERATE_METRICS}" ]] && CLI_GENERATE_METRICS="1" || error "Parameter already set: -G"; shift;;
+
 			-R|--retries)
 				[[ -z "${CLI_RETRIES}" ]] && CLI_RETRIES="${2}" || error "Argument already set: -R"; shift; shift;;
 
@@ -266,6 +298,16 @@ main() {
 		error "Error! Only one parameter is allowed: input file or domain"
 	fi
 
+	if [[ "${CLI_GENERATE_METRICS}" == "1" ]] && [[ -z "${PROMETHEUS_EXPORT_FILENAME}" ]]; then
+		error "Error! PROMETHEUS_EXPORT_FILENAME is not set"
+	else
+		if ! touch "${PROMETHEUS_EXPORT_FILENAME}"; then
+			error "Can't create Prometheus metrics file '${PROMETHEUS_EXPORT_FILENAME}'"
+		else
+			info "Prometheus metrics file touched: '${PROMETHEUS_EXPORT_FILENAME}'"
+		fi
+	fi
+
 	if [[ ! -z "${CLI_INPUT_FILENAME}" ]]; then
 		[[ -f "${CLI_INPUT_FILENAME}" ]] || error "Can't open input file: '${CLI_INPUT_FILENAME}'"
 		input_filename="${CLI_INPUT_FILENAME}"
@@ -279,7 +321,7 @@ main() {
 		backend_read "${CLI_BACKEND_NAME}" "${input_filename}"
 	fi
 
-	today_timestamp="$(date "+%s")"
+	
 
 	while IFS= read -r remote_hostname; do 
 
@@ -293,13 +335,18 @@ main() {
 			warning "Skipping '${remote_hostname}'"
 			error_result+=( "${remote_hostname}" )
 		else
+			info "Adding item into full_result: '${current_result}'" 
 			full_result+=( "${current_result}" )
 		fi
+
 		info "Finished processing '${remote_hostname}'"
+
 	done < "${input_filename}"
 
 	if [[ "${#full_result[@]}" -le "0" ]]; then
 		warning "Couldn't process anything from '${input_filename}'"
+	else
+		info "Processed '${#full_result[@]}' items from '${input_filename}'"
 	fi
 
 	if [[ "${#error_result[@]}" -gt "0" ]]; then
@@ -308,18 +355,26 @@ main() {
 		done
 	fi
 
+	if [[ "${CLI_GENERATE_METRICS}" == "1" ]]; then
+		info "Generating Prometheus metrics"
+		generate_prometheus_metrics "${full_result[@]}"
+	fi
+
 	for result_item in "${full_result[@]}"; do
 		
 		result_item_parts=( ${result_item} )
-		
+		info "Result item split into ${#result_item_parts[@]} parts: ${result_item_parts[*]}"
+
 		if [[ "${CLI_ONLY_ALERTING}" == "1" ]]; then
-			if [[ "$(( (result_item_parts[2] - today_timestamp) / 86400 ))" -gt "${CLI_ALERT_LIMIT}" ]]; then
+			if [[ "$(( (result_item_parts[2] - TODAY_TIMESTAMP) / 86400 ))" -gt "${CLI_ALERT_LIMIT}" ]]; then
 				info "Certificate on ${result_item_parts[0]} expiring later than alert limit (${CLI_ALERT_LIMIT} day(s))."
 				continue
 			fi
 		fi
 
-		formatted_result+=( "${result_item_parts[0]}	$(epoch_to_date "${result_item_parts[1]}" "+%F %T")	$(epoch_to_date "${result_item_parts[2]}" "+%F %T")	$(( (result_item_parts[2] - today_timestamp) / 86400 ))" )
+		formatted_result_item="${result_item_parts[0]}	$(epoch_to_date "${result_item_parts[1]}" "+%F %T")	$(epoch_to_date "${result_item_parts[2]}" "+%F %T")	$(( (result_item_parts[2] - TODAY_TIMESTAMP) / 86400 ))"
+		info "Rendering a formatted result item: '${formatted_result_item}'"
+		formatted_result+=( "${formatted_result_item}" )
 	done
 
 	while read formatted_item; do

@@ -25,10 +25,15 @@ jobs:
       run: echo "${{steps.readversionfile.outputs.desiredversion}}"
 
     - name: Test run
-      run: bash check_certificates.sh -i test/inputfile.txt --only-alerting --alert-limit 5 | tee test_run_result.txt
+      run: |
+        export PROMETHEUS_EXPORT_FILENAME="./metrics"
+        bash check_certificates.sh -G -i test/inputfile.txt --only-alerting --alert-limit 5 | tee test_run_result.txt
 
     - name: Test run results verification
       run: diff -u test_run_result.txt test/expected_result.txt
+
+    - name: Test run results verification (metrics)
+      run: cat ./metrics
 
     - name: Lookup planned tag
       id: tagexists
