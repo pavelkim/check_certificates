@@ -132,6 +132,10 @@ generate_prometheus_metrics() {
 	[[ -z "${TODAY_TIMESTAMP}" ]] && error "TODAY_TIMESTAMP not set!"
 
 	local metrics_name='check_certificates_expiration'
+	local full_result
+	local full_result_item
+	local full_result_item_parts
+	local metrics_item
 
 	[[ ! -z "$*" ]] && full_result=( "$@" ) || error "Formatted result list not set!"
 
