@@ -129,7 +129,7 @@ server {
     access_log  /var/log/nginx/localhost-access.log  main;
     error_log  /var/log/nginx/localhost-error.log;
 
-    location /metrics {
+    location /check_certificates/metrics {
         alias /opt/check_certificates/metrics;
         allow 127.0.0.1/32;
         deny  all;
