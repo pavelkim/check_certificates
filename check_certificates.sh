@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2015
 #
 # Checks if SSL Certificate on https server is valid.
 #
@@ -304,12 +305,14 @@ main() {
 
 	if [[ "${CLI_GENERATE_METRICS}" == "1" ]] && [[ -z "${PROMETHEUS_EXPORT_FILENAME}" ]]; then
 		error "Error! PROMETHEUS_EXPORT_FILENAME is not set"
-	else
+	elif [[ "${CLI_GENERATE_METRICS}" == "1" ]] && [[ ! -z "${PROMETHEUS_EXPORT_FILENAME}" ]]; then
 		if ! touch "${PROMETHEUS_EXPORT_FILENAME}"; then
 			error "Can't create Prometheus metrics file '${PROMETHEUS_EXPORT_FILENAME}'"
 		else
 			info "Prometheus metrics file touched: '${PROMETHEUS_EXPORT_FILENAME}'"
 		fi
+	else
+		info "Prometheus metrics generation not requested"
 	fi
 
 	if [[ ! -z "${CLI_INPUT_FILENAME}" ]]; then
