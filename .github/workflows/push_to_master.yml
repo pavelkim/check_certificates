@@ -81,45 +81,45 @@ jobs:
         asset_content_type: application/octet-stream
 
 
-      - name: Upload assets to pavelkim.github.io
-        id: upload_to_pavelkim_github_io
-        shell: bash
-        run: |
-          SSH_DIR="${HOME}/.ssh"
-          PRIVATE_KEY_FILENAME="${SSH_DIR}/id_ecdsa"
-          REPO_CLONE_PATH="${PWD}/repo"
-          REPO_DIST_PATH="${REPO_CLONE_PATH}/dist/check_certificates"
-          REPO_VERSIONED_PATH="${REPO_DIST_PATH}/${{ env.PLANNED_VERSION }}"
-          REPO_LATEST_PATH="${REPO_DIST_PATH}/check_certificates/latest"
+    - name: Upload assets to pavelkim.github.io
+      id: upload_to_pavelkim_github_io
+      shell: bash
+      run: |
+        SSH_DIR="${HOME}/.ssh"
+        PRIVATE_KEY_FILENAME="${SSH_DIR}/id_ecdsa"
+        REPO_CLONE_PATH="${PWD}/repo"
+        REPO_DIST_PATH="${REPO_CLONE_PATH}/dist/check_certificates"
+        REPO_VERSIONED_PATH="${REPO_DIST_PATH}/${{ env.PLANNED_VERSION }}"
+        REPO_LATEST_PATH="${REPO_DIST_PATH}/check_certificates/latest"
 
-          mkdir -pv "${SSH_DIR}"
-          echo "${{ secrets.PAVELKIM_GITHUB_IO_ID_ECDSA }}" >> "${PRIVATE_KEY_FILENAME}"
-          chmod 600 "${PRIVATE_KEY_FILENAME}"
+        mkdir -pv "${SSH_DIR}"
+        echo "${{ secrets.PAVELKIM_GITHUB_IO_ID_ECDSA }}" >> "${PRIVATE_KEY_FILENAME}"
+        chmod 600 "${PRIVATE_KEY_FILENAME}"
 
-          git config --global user.email "github-actions@local"
-          git config --global user.name "GitHub Actions"
+        git config --global user.email "github-actions@local"
+        git config --global user.name "GitHub Actions"
 
-          mkdir -pv "${REPO_CLONE_PATH}"
-          git clone "${{ secrets.PAVELKIM_GITHUB_IO_REPO_URL }}" "${REPO_CLONE_PATH}"
+        mkdir -pv "${REPO_CLONE_PATH}"
+        git clone "${{ secrets.PAVELKIM_GITHUB_IO_REPO_URL }}" "${REPO_CLONE_PATH}"
 
-          mkdir -pv "${REPO_VERSIONED_PATH}"
+        mkdir -pv "${REPO_VERSIONED_PATH}"
 
-          cp -v ./check_certificates.sh "${REPO_VERSIONED_PATH}/check_certificates.sh"
+        cp -v ./check_certificates.sh "${REPO_VERSIONED_PATH}/check_certificates.sh"
 
-          cd "${REPO_DIST_PATH}"
-          ln -sfn "${{ env.PLANNED_VERSION }}" "latest"
-          ls -la
+        cd "${REPO_DIST_PATH}"
+        ln -sfn "${{ env.PLANNED_VERSION }}" "latest"
+        ls -la
 
-          REPO_CHANGES=$( git -C "${REPO_CLONE_PATH}" status --porcelain | wc -l )
-          
-          # My best guess on how to cast to int:
-          REPO_CHANGES_COUNT=$(( REPO_CHANGES + 0 ))
+        REPO_CHANGES=$( git -C "${REPO_CLONE_PATH}" status --porcelain | wc -l )
+        
+        # My best guess on how to cast to int:
+        REPO_CHANGES_COUNT=$(( REPO_CHANGES + 0 ))
 
-          if [[ "${REPO_CHANGES_COUNT}" -gt 0 ]]; then
-            git -C "${REPO_CLONE_PATH}" diff-index HEAD
-            git -C "${REPO_CLONE_PATH}" add "${REPO_DIST_PATH}"
-            git -C "${REPO_CLONE_PATH}" commit -m "[Change] check_certificates scripts release ${{ env.PLANNED_VERSION }}"
-            git -C "${REPO_CLONE_PATH}" push origin master
-          else
-            echo "No changes to commit"
-          fi
+        if [[ "${REPO_CHANGES_COUNT}" -gt 0 ]]; then
+          git -C "${REPO_CLONE_PATH}" diff-index HEAD
+          git -C "${REPO_CLONE_PATH}" add "${REPO_DIST_PATH}"
+          git -C "${REPO_CLONE_PATH}" commit -m "[Change] check_certificates scripts release ${{ env.PLANNED_VERSION }}"
+          git -C "${REPO_CLONE_PATH}" push origin master
+        else
+          echo "No changes to commit"
+        fi
