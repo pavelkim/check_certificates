@@ -1,4 +1,4 @@
-name: Bash
+name: Push to dev
 
 on:
   push:
