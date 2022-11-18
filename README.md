@@ -90,7 +90,7 @@ google.com
 
 # Prometheus metrics
 
-The script can generate a file with Prometheus metrics that is to be served by an external web server (eg. nginx or httpd).
+The script can generate a static file with Prometheus metrics that is to be served by an external web server (eg. nginx or httpd).
 
 Use `-G` or `--generate-metrics` parameters to enable this feature.
 
@@ -111,6 +111,8 @@ check_certificates_expiration{domain="imaginary-domain-9000.com"} -1
 ```
 
 ## nginx configuration example
+
+Note: if you're running your nginx in a container, make sure your metrics file is accessable for nginx within the container (use volumes or something).
 
 ```nginx
 server {
@@ -197,5 +199,6 @@ The script executed as displayed above will return 0 in case if `example.com` ha
 
 Currently tested on the following platforms:
 1. CentOS 7, bash 4.2.46, openssl 1.0.2k
-1. CentOS 8, bash 4.4.19, openssl 1.1.1c
-2. Mac OS 10.13.6, bash 3.2.57, openssl 1.1.1d
+2. CentOS 8, bash 4.4.19, openssl 1.1.1c
+3. Mac OS 10.13.6, bash 3.2.57, openssl 1.1.1d
+4. Mac OS 12.5, bash 5.1.16, OpenSSL 3.0.7
