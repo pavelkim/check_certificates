@@ -117,9 +117,9 @@ jobs:
           registry_token: "${{ secrets.GITHUB_TOKEN }}"
           name: "${{ github.repository }}/${{ env.APP_NAME }}"
           planned_version: "${{ env.PLANNED_VERSION }}"
-          build_args:
-            - "APP_VERSION=${{ PLANNED_VERSION }}"
-            - "APP_VERSION_NEW=${{ PLANNED_VERSION }}"
+          build_args: |
+            APP_VERSION=${{ PLANNED_VERSION }}
+            APP_VERSION_NEW=${{ PLANNED_VERSION }}
 
 
       # - name: Build Docker image
