@@ -108,26 +108,40 @@ jobs:
           rest_gateway_bot_name: "${{ secrets.REST_GATEWAY_BOT_NAME }}"
 
 
-      - name: Build Docker image
+      - name: Build Docker image (ghcr)
         id: build_docker_image
-        uses: reinvented-stuff/build-docker-image-action@master
+        uses: reinvented-stuff/build-docker-image-action@dev
         with:
-          github_token: "${{ secrets.GITHUB_TOKEN }}"
-          name: "${{ env.APP_NAME }}"
+          registry_address: "ghcr.io"
+          registry_username: "${{ github.actor }}"
+          registry_token: "${{ secrets.GITHUB_TOKEN }}"
+          name: "${{ github.repository }}/${{ env.APP_NAME }}"
           planned_version: "${{ env.PLANNED_VERSION }}"
+          build_args:
+            - "APP_VERSION=${{ PLANNED_VERSION }}"
+            - "APP_VERSION_NEW=${{ PLANNED_VERSION }}"
 
 
-      - name: Send out notification about docker image build
-        uses: rest-gateway/notification-action@master
-        with:
-          message: |
-            Docker image: <b>${{ env.APP_NAME }}</b> v${{ env.PLANNED_VERSION }} (${{ env.BRANCH_NAME }})
+      # - name: Build Docker image
+      #   id: build_docker_image
+      #   uses: reinvented-stuff/build-docker-image-action@master
+      #   with:
+      #     github_token: "${{ secrets.GITHUB_TOKEN }}"
+      #     name: "${{ env.APP_NAME }}"
+      #     planned_version: "${{ env.PLANNED_VERSION }}"
 
-            <code>${{ steps.build_docker_image.outputs.image_full_name }}</code>
-          recipient: "${{ secrets.NOTIFICATIONS_DEFAULT_RECIPIENT }}"
-          rest_gateway_url: "${{ secrets.REST_GATEWAY_API_URL }}"
-          rest_gateway_token: "${{ secrets.REST_GATEWAY_TOKEN }}"
-          rest_gateway_bot_name: "${{ secrets.REST_GATEWAY_BOT_NAME }}"
+
+      # - name: Send out notification about docker image build
+      #   uses: rest-gateway/notification-action@master
+      #   with:
+      #     message: |
+      #       Docker image: <b>${{ env.APP_NAME }}</b> v${{ env.PLANNED_VERSION }} (${{ env.BRANCH_NAME }})
+
+      #       <code>${{ steps.build_docker_image.outputs.image_full_name }}</code>
+      #     recipient: "${{ secrets.NOTIFICATIONS_DEFAULT_RECIPIENT }}"
+      #     rest_gateway_url: "${{ secrets.REST_GATEWAY_API_URL }}"
+      #     rest_gateway_token: "${{ secrets.REST_GATEWAY_TOKEN }}"
+      #     rest_gateway_bot_name: "${{ secrets.REST_GATEWAY_BOT_NAME }}"
 
 
 ...
