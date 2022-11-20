@@ -22,7 +22,7 @@ RUN mkdir -pv "${DEFAULT_CONFIG_DIR}" && \
 
 RUN apk --no-cache --update add bash curl openssl coreutils util-linux
 
-ADD "${APP_BASE_URL}/${APP_VERSION}/${APP_FILENAME}" /check_certificates.sh
+ADD "${APP_FILENAME}" /check_certificates.sh
 
 VOLUME ["/etc/check_certificates", "/htdocs"]
 
