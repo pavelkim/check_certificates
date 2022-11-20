@@ -134,7 +134,7 @@ jobs:
 
       - name: Verify version in the script
         id: check_version_in_script
-        run: grep "VERSION=${{ env.PLANNED_VERSION }}" check_certificates.sh
+        run: grep "VERSION=\"${{ env.PLANNED_VERSION }}\"" check_certificates.sh
 
 
       - name: Upload a Build Artifact
