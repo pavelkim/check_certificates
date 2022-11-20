@@ -33,7 +33,7 @@ jobs:
 
       - name: Use latest released action
         id: validate_new_version
-        uses: reinvented-stuff/validate-version-action@master
+        uses: reinvented-stuff/validate-version-action@1.1.3
         with:
           version_filename: ".version"
           github_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -96,7 +96,7 @@ jobs:
 
 
       - name: Send out notification about build
-        uses: rest-gateway/notification-action@master
+        uses: rest-gateway/notification-action@1.0.9
         with:
           message: |
             Build: <b>${{ env.APP_NAME }}</b> v${{ env.PLANNED_VERSION }} (${{ env.BRANCH_NAME }})
@@ -109,39 +109,43 @@ jobs:
 
 
       - name: Build Docker image (ghcr)
-        id: build_docker_image
-        uses: reinvented-stuff/build-docker-image-action@dev
+        id: build_docker_image_ghcr
+        uses: reinvented-stuff/build-docker-image-action@2.0.0
         with:
           registry_address: "ghcr.io"
           registry_username: "${{ github.actor }}"
           registry_token: "${{ secrets.GITHUB_TOKEN }}"
           name: "${{ github.repository }}/${{ env.APP_NAME }}"
           planned_version: "${{ env.PLANNED_VERSION }}"
-          build_args: |
+          build_args: |-
             APP_VERSION=${{ env.PLANNED_VERSION }}
-            APP_VERSION_NEW=${{ env.PLANNED_VERSION }}
 
 
-      # - name: Build Docker image
-      #   id: build_docker_image
-      #   uses: reinvented-stuff/build-docker-image-action@master
-      #   with:
-      #     github_token: "${{ secrets.GITHUB_TOKEN }}"
-      #     name: "${{ env.APP_NAME }}"
-      #     planned_version: "${{ env.PLANNED_VERSION }}"
+      - name: Build Docker image (docker hub)
+        id: build_docker_image_hub
+        uses: reinvented-stuff/build-docker-image-action@2.0.0
+        with:
+          registry_address: "hub.docker.com"
+          registry_username: "${{ secrets.DOCKER_HUB_USERNAME }}"
+          registry_token: "${{ secrets.DOCKER_HUB_TOKEN }}"
+          name: "${{ secrets.DOCKER_HUB_IMAGE_NAME }}"
+          planned_version: "${{ env.PLANNED_VERSION }}"
+          build_args: |-
+            APP_VERSION=${{ env.PLANNED_VERSION }}
 
 
-      # - name: Send out notification about docker image build
-      #   uses: rest-gateway/notification-action@master
-      #   with:
-      #     message: |
-      #       Docker image: <b>${{ env.APP_NAME }}</b> v${{ env.PLANNED_VERSION }} (${{ env.BRANCH_NAME }})
+      - name: Send out notification about docker image build
+        uses: rest-gateway/notification-action@1.0.9
+        with:
+          message: |
+            Docker image: <b>${{ env.APP_NAME }}</b> v${{ env.PLANNED_VERSION }} (${{ env.BRANCH_NAME }})
 
-      #       <code>${{ steps.build_docker_image.outputs.image_full_name }}</code>
-      #     recipient: "${{ secrets.NOTIFICATIONS_DEFAULT_RECIPIENT }}"
-      #     rest_gateway_url: "${{ secrets.REST_GATEWAY_API_URL }}"
-      #     rest_gateway_token: "${{ secrets.REST_GATEWAY_TOKEN }}"
-      #     rest_gateway_bot_name: "${{ secrets.REST_GATEWAY_BOT_NAME }}"
+            <code>${{ steps.build_docker_image_hub.outputs.image_full_name }}</code>
+            <code>${{ steps.build_docker_image_ghcr.outputs.image_full_name }}</code>
+          recipient: "${{ secrets.NOTIFICATIONS_DEFAULT_RECIPIENT }}"
+          rest_gateway_url: "${{ secrets.REST_GATEWAY_API_URL }}"
+          rest_gateway_token: "${{ secrets.REST_GATEWAY_TOKEN }}"
+          rest_gateway_bot_name: "${{ secrets.REST_GATEWAY_BOT_NAME }}"
 
 
 ...
