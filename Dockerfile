@@ -1,7 +1,5 @@
 FROM alpine:3.16
 
-ARG APP_BASE_URL=https://pavelkim.github.io/dist/check_certificates
-ARG APP_FILENAME=check_certificates.sh
 ARG APP_VERSION=latest
 
 LABEL org.opencontainers.image.title="check_certificates"
@@ -15,6 +13,7 @@ ENV DEFAULT_CONFIG_FILE_PATH="${DEFAULT_CONFIG_DIR}/.config"
 ENV DEFAULT_HTDOCS_DIR=/htdocs
 ENV DEFAULT_METRICS_FILE_PATH="${DEFAULT_HTDOCS_DIR}/metrics"
 ENV DEFAULT_CHECK_CERTIFICATES_PATH="/check_certificates.sh"
+ENV DEFAULT_WRAPPER_LOOP_PATH="/wrapper_loop.sh"
 
 ARG CHECK_INTERVAL=0
 ARG CHECK_CERTIFICATES_PATH="${DEFAULT_CHECK_CERTIFICATES_PATH}"
@@ -28,7 +27,8 @@ RUN mkdir -pv "${DEFAULT_CONFIG_DIR}" && \
 RUN apk --no-cache --update add bash curl openssl coreutils util-linux
 
 ADD "${APP_FILENAME}" "${DEFAULT_CHECK_CERTIFICATES_PATH}"
-RUN chmod a+x "${DEFAULT_CHECK_CERTIFICATES_PATH}"
+ADD "${APP_WRAPPER_FILENAME}" "${DEFAULT_WRAPPER_LOOP_PATH}"
+RUN chmod a+x "${DEFAULT_CHECK_CERTIFICATES_PATH}" "${DEFAULT_WRAPPER_LOOP_PATH}"
 
 VOLUME ["/etc/check_certificates", "/htdocs"]
 
