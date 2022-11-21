@@ -28,18 +28,16 @@ Usage: check_certificates.sh [-h] [-v] [-s] [-l] [-n] [-A n] [-G] -i input_filen
 
 You can run a container either in daemon mode, or single start.
 
-## Prepare environment
-
 An example environment is provided under the `./docker/` directory. Take a look into `docker-compose.yml`. Manual setup is easy too, though.
 
-Create directories:
+## Create directories
 
 ```bash
 mkdir -pv "/opt/check_certificates/etc/check_certificates"
 mkdir -pv "/opt/check_certificates/htdocs"
 ```
 
-Create basic configuration:
+## Create configuration files
 
 ```bash
 cat << EOF > /opt/check_certificates/etc/check_certificates/.config
@@ -57,7 +55,7 @@ google.com
 EOF
 ```
 
-Start a docker container:
+## Start a docker container
 
 ```bash
 docker run \
