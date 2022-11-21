@@ -264,7 +264,7 @@ jobs:
           PRIVATE_KEY_FILENAME="${SSH_DIR}/id_ecdsa"
           REPO_CLONE_PATH="${PWD}/repo"
           REPO_DIST_PATH="${REPO_CLONE_PATH}/dist/check_certificates"
-          REPO_VERSIONED_PATH="${REPO_DIST_PATH}/${{ steps.readversionfile.outputs.desiredversion }}"
+          REPO_VERSIONED_PATH="${REPO_DIST_PATH}/${{ needs.validate_new_version.outputs.planned_version }}"
           REPO_LATEST_PATH="${REPO_DIST_PATH}/check_certificates/latest"
 
           mkdir -pv "${SSH_DIR}"
@@ -282,7 +282,7 @@ jobs:
           cp -v ./check_certificates.sh "${REPO_VERSIONED_PATH}/check_certificates.sh"
 
           cd "${REPO_DIST_PATH}"
-          ln -sfn "${{ steps.readversionfile.outputs.desiredversion }}" "latest"
+          ln -sfn "${{ needs.validate_new_version.outputs.planned_version }}" "latest"
           ls -la
 
           REPO_CHANGES=$( git -C "${REPO_CLONE_PATH}" status --porcelain | wc -l )
@@ -293,7 +293,7 @@ jobs:
           if [[ "${REPO_CHANGES_COUNT}" -gt 0 ]]; then
             git -C "${REPO_CLONE_PATH}" diff-index HEAD
             git -C "${REPO_CLONE_PATH}" add "${REPO_DIST_PATH}"
-            git -C "${REPO_CLONE_PATH}" commit -m "[Change] check_certificates scripts release ${{ steps.readversionfile.outputs.desiredversion }}"
+            git -C "${REPO_CLONE_PATH}" commit -m "[Change] check_certificates scripts release ${{ needs.validate_new_version.outputs.planned_version }}"
             git -C "${REPO_CLONE_PATH}" push origin master
           else
             echo "No changes to commit"
