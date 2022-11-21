@@ -18,9 +18,6 @@ services:
   check_certificates:
     image: ghcr.io/pavelkim/check_certificates/check_certificates:1.7.2dev
     container_name: check_certificates-daemon
-    build:
-      context: .
-      dockerfile: Dockerfile
     environment:
       CHECK_INTERVAL: 7200
     volumes:
