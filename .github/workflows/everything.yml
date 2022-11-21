@@ -177,6 +177,12 @@ jobs:
 
     steps:
 
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+
       - name: Download articact from the build stage
         uses: actions/download-artifact@v3
         with:
