@@ -1,5 +1,7 @@
 FROM alpine:3.16
 
+ARG APP_FILENAME=check_certificates.sh
+ARG APP_WRAPPER_FILENAME=wrapper_loop.sh
 ARG APP_VERSION=latest
 
 LABEL org.opencontainers.image.title="check_certificates"
