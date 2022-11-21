@@ -16,17 +16,16 @@ services:
       - "./docker/usr/share/nginx/htdocs:/usr/share/nginx/htdocs"
 
   check_certificates:
-    image: ghcr.io/pavelkim/check_certificates/check_certificates:1.7.0
-    container_name: check_certificates
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/pavelkim/check_certificates/check_certificates:1.7.2dev
+    container_name: check_certificates-daemon
+    environment:
+      CHECK_INTERVAL: 7200
     volumes:
       - "./docker/etc/check_certificates:/etc/check_certificates"
       - "./docker/usr/share/nginx/htdocs:/htdocs"
     command:
-      - "-d"
-      - "ipaddr.pl"
+      - "-i"
+      - "/etc/check_certificates/domains.txt"
       - "-G"
     depends_on:
       - nginx

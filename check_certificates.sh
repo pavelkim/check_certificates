@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC2015
+# shellcheck disable=SC2015,SC2236
 #
 # Checks if SSL Certificate on https server is valid.
 # ===================================================
@@ -427,4 +427,4 @@ main() {
 
 }
 
-main "$@"
+main "${@}"
