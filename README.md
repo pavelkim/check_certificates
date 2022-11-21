@@ -24,6 +24,61 @@ Usage: check_certificates.sh [-h] [-v] [-s] [-l] [-n] [-A n] [-G] -i input_filen
    -h, --help               Show help
 ```
 
+# Docker container
+
+You can run a container either in daemon mode, or single start.
+
+## Prepare environment
+
+An example environment is provided under the `./docker/` directory. Take a look into `docker-compose.yml`. Manual setup is easy too, though.
+
+Create directories:
+
+```bash
+mkdir -pv "/opt/check_certificates/etc/check_certificates"
+mkdir -pv "/opt/check_certificates/htdocs"
+```
+
+Create basic configuration:
+
+```bash
+cat << EOF > /opt/check_certificates/etc/check_certificates/.config
+PROMETHEUS_EXPORT_FILENAME="/htdocs/metrics"
+
+EOF
+```
+
+```bash
+cat << EOF > /opt/check_certificates/etc/check_certificates/domains.txt
+example.com
+example.org
+google.com
+
+EOF
+```
+
+Start a docker container:
+
+```bash
+docker run \
+  --name check_certificates-daemon \
+  --detach \
+  --rm \
+  -ti \
+  -v "/opt/check_certificates/etc/check_certificates:/etc/check_certificates" \
+  -v "${PWD}/docker/usr/share/nginx/htdocs:/htdocs" \
+  -e CHECK_INTERVAL=$(( 60 * 60 * 2 )) \
+  ghcr.io/pavelkim/check_certificates/check_certificates:1.8.0 \
+  -i /etc/check_certificates/domains.txt \
+  -G
+```
+
+Environment variable `CHECK_INTERVAL` sets the sleep interval between the checks. Currently it doesn't work like a schedule (like cron would). It just waits for N seconds between checks. So, if each your check takes ~7min, the "schedule" will shift for that time.
+
+This will result with a recurrent checks every `$(( 60 * 60 * 2 ))` seconds (2 hours).
+
+Prometheus metrics will appear in a static file: `/opt/check_certificates/htdocs/metrics`. If you want them to be served by nginx or something like that, just make sure `metrics` file is reachable by nginx container.
+
 # Supported domain list backends
 
 Domain list backends allow you to manage configuration in a centralised manner.
@@ -171,6 +226,8 @@ More informatin: https://grafana.com/grafana/dashboards/15298
 # Application examples
 
 ## Monitoring in Cron
+
+_NOTE_: Take a look into the Docker application examples with recurrent checks support built-in.
 
 The following example of a crontab will provide you with email notfications in 14 days prior to SSL certificate expiration (or in case of other errors). Before that you'll receive no emails. Keep in mind that you'll need to have your Cron and MTA configured properly.
 

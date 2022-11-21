@@ -6,6 +6,35 @@ on:
 
 jobs:
 
+
+  validate_new_version:
+    name: Validate new version
+    runs-on: ubuntu-latest
+    outputs:
+      planned_version: ${{ steps.validate_new_version.outputs.planned_version }}
+      version_file_exists: ${{ steps.validate_new_version.outputs.version_file_exists }}
+      tag_hash: ${{ steps.validate_new_version.outputs.tag_hash }}
+      can_create: ${{ steps.validate_new_version.outputs.can_create }}
+      tag_exists: ${{ steps.validate_new_version.outputs.tag_exists }}
+      branch_name: ${{ steps.validate_new_version.outputs.branch_name }}
+
+    steps:
+
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+
+      - name: Use latest released action
+        id: validate_new_version
+        uses: reinvented-stuff/validate-version-action@1.1.3
+        with:
+          version_filename: ".version"
+          github_token: "${{ secrets.GITHUB_TOKEN }}"
+          fail_on_error: true
+
+
   build:
     name: Build dev branch
     runs-on: ubuntu-latest
@@ -13,16 +42,6 @@ jobs:
 
     - name: Check out code
       uses: actions/checkout@v2
-
-    - name: Check if .version file exists
-      run: if [[ -f .version ]]; then exit 0; else exit 2; fi
-
-    - name: Read out .version file
-      id: readversionfile
-      run: echo "::set-output name=desiredversion::$(cat .version)"
-
-    - name: Verify version
-      run: echo "${{steps.readversionfile.outputs.desiredversion}}"
 
     - name: Test run
       run: |
@@ -35,10 +54,3 @@ jobs:
     - name: Test run results verification (metrics)
       run: cat ./metrics
 
-    - name: Lookup planned tag
-      id: tagexists
-      run: |
-        echo "::set-output name=tagexists::$(curl -s -X GET -H 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' --url https://api.github.com/repos/${{ github.repository }}/git/refs/tags/${{steps.readversionfile.outputs.desiredversion}} | jq .object.sha)"
-    
-    - name: Check if planned tag doesn't exist yet
-      run: if [[ "${{ steps.tagexists.outputs.tagexists }}" == "null" ]]; then exit 0; else exit 2; fi

@@ -24,8 +24,8 @@ services:
       - "./docker/etc/check_certificates:/etc/check_certificates"
       - "./docker/usr/share/nginx/htdocs:/htdocs"
     command:
-      - "-d"
-      - "ipaddr.pl"
+      - "-i"
+      - "/etc/check_certificates/domains.txt"
       - "-G"
     depends_on:
       - nginx
