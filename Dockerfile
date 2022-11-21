@@ -10,10 +10,15 @@ LABEL org.opencontainers.image.authors="Pavel Kim <hello@pavelkim.com>"
 LABEL org.opencontainers.image.url="https://github.com/pavelkim/check_certificates"
 LABEL org.opencontainers.image.version="${APP_VERSION}"
 
-ARG DEFAULT_CONFIG_DIR=/etc/check_certificates/
-ARG DEFAULT_CONFIG_FILE_PATH="${DEFAULT_CONFIG_DIR}/.config"
-ARG DEFAULT_HTDOCS_DIR=/htdocs
-ARG DEFAULT_METRICS_FILE_PATH="${DEFAULT_HTDOCS_DIR}/metrics"
+ENV DEFAULT_CONFIG_DIR=/etc/check_certificates
+ENV DEFAULT_CONFIG_FILE_PATH="${DEFAULT_CONFIG_DIR}/.config"
+ENV DEFAULT_HTDOCS_DIR=/htdocs
+ENV DEFAULT_METRICS_FILE_PATH="${DEFAULT_HTDOCS_DIR}/metrics"
+ENV DEFAULT_CHECK_CERTIFICATES_PATH="/check_certificates.sh"
+
+ARG CHECK_INTERVAL=0
+ARG CHECK_CERTIFICATES_PATH="${DEFAULT_CHECK_CERTIFICATES_PATH}"
+ARG GLOBAL_LOGLEVEL=1
 
 RUN mkdir -pv "${DEFAULT_CONFIG_DIR}" && \
     mkdir -pv "${DEFAULT_HTDOCS_DIR}" && \
@@ -22,9 +27,10 @@ RUN mkdir -pv "${DEFAULT_CONFIG_DIR}" && \
 
 RUN apk --no-cache --update add bash curl openssl coreutils util-linux
 
-ADD "${APP_FILENAME}" /check_certificates.sh
+ADD "${APP_FILENAME}" "${DEFAULT_CHECK_CERTIFICATES_PATH}"
+RUN chmod a+x "${DEFAULT_CHECK_CERTIFICATES_PATH}"
 
 VOLUME ["/etc/check_certificates", "/htdocs"]
 
 WORKDIR "${DEFAULT_CONFIG_DIR}"
-ENTRYPOINT ["bash", "/check_certificates.sh"]
+ENTRYPOINT ["bash", "/wrapper_loop.sh"]
