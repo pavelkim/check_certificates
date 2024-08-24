@@ -66,7 +66,7 @@ docker run \
   -v "/opt/check_certificates/etc/check_certificates:/etc/check_certificates" \
   -v "${PWD}/docker/usr/share/nginx/htdocs:/htdocs" \
   -e CHECK_INTERVAL=$(( 60 * 60 * 2 )) \
-  ghcr.io/pavelkim/check_certificates/check_certificates:1.8.0 \
+  ghcr.io/pavelkim/check_certificates/check_certificates:1.9.0 \
   -i /etc/check_certificates/domains.txt \
   -G
 ```
@@ -156,11 +156,11 @@ PROMETHEUS_EXPORT_FILENAME="/path/to/htdocs/metrics"
 ## Metrics example
 
 ```prometheus
-# HELP check_certificates_expiration Days until HTTPs SSL certificate expires (skipped on error)
-# TYPE check_certificates_expiration counter
+# HELP check_certificates_expiration Days until HTTPs SSL certificate expires
+# TYPE check_certificates_expiration gauge
 check_certificates_expiration{domain="example.com",outcome="ok"} 20
 check_certificates_expiration{domain="example.de",outcome="ok"} 193
-check_certificates_expiration{domain="imaginary-domain-9000.com",outcome="error"} -1
+check_certificates_expiration{domain="imaginary-domain-9000.com",outcome="error"} 0
 ```
 
 ## nginx configuration example
@@ -245,7 +245,12 @@ You could use `--sensor-mode` along with other parameters to make the script exi
 For Zabbix you can create a simple check to monitor your remote SSL certificate. For Nagios/Icinga you can configure a separate service check.
 
 ```bash
-./check_certificates.sh --sensor-mode --only-names --only-alerting --alert-limit 14 --domain example.com
+./check_certificates.sh \
+  --sensor-mode \
+  --only-names \
+  --only-alerting \
+  --alert-limit 14 \
+  --domain example.com
 ```
 
 The script executed as displayed above will return 0 in case if `example.com` has SSL certificate valid for 15 or more days. In case of error (DNS, firewall, etc.) or if certificate will expire in less then 14 days, the script will return 1.
