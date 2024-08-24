@@ -1,0 +1,149 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Grafana dashboard for check_certificates.sh",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "gnetId": 15298,
+  "graphTooltip": 0,
+  "id": 67,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "T1IGAL44k"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "": {
+                  "text": ""
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red",
+                "value": null
+              },
+              {
+                "color": "light-red",
+                "value": 5
+              },
+              {
+                "color": "semi-dark-yellow",
+                "value": 10
+              },
+              {
+                "color": "semi-dark-green",
+                "value": 12
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.1.7",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "T1IGAL44k"
+          },
+          "editorMode": "code",
+          "expr": "check_certificates_expiration{outcome=\"error\"}",
+          "interval": "",
+          "legendFormat": "{{ domain }} {{ outcome }}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "T1IGAL44k"
+          },
+          "editorMode": "code",
+          "expr": "check_certificates_expiration{outcome=\"ok\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{ domain }}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "SSL Certificate status",
+      "transformations": [],
+      "type": "stat"
+    }
+  ],
+  "schemaVersion": 37,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "HTTPs SSL Certificate Status",
+  "uid": "9-FJ-Np8a",
+  "version": 3,
+  "weekStart": "",
+  "description": "Grafana dashboard for check_certificates.sh v1.9.0"
+}
