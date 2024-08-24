@@ -164,19 +164,21 @@ generate_prometheus_metrics() {
     local full_result_item
     local full_result_item_parts
     local metrics_item
+    local metrics_labels
 
     [[ ! -z "$*" ]] && full_result=( "$@" ) || error "Formatted result list not set!"
 
     info "Exporting Prometheus metrics into file '${PROMETHEUS_EXPORT_FILENAME}'"
 
     info "Writing Prometheus metrics header (overwriting)"
-    echo "# HELP check_certificates_expiration Days until HTTPs SSL certificate expires (skipped on error)" > "${PROMETHEUS_EXPORT_FILENAME}"
+    echo "# HELP check_certificates_expiration Days until HTTPs SSL certificate expires" > "${PROMETHEUS_EXPORT_FILENAME}"
     echo "# TYPE check_certificates_expiration gauge" >> "${PROMETHEUS_EXPORT_FILENAME}"
 
     for full_result_item in "${full_result[@]}"; do
         full_result_item_parts=( ${full_result_item} )
         # shellcheck disable=SC2004
-        metrics_item="${metrics_name}{domain=\"${full_result_item_parts[0]}\"} $(( (${full_result_item_parts[2]} - ${TODAY_TIMESTAMP}) / 86400 ))"
+        metrics_labels="domain=\"${full_result_item_parts[0]}\",outcome=\"${full_result_item_parts[3]}\""
+        metrics_item="${metrics_name}{${metrics_labels}} $(( (${full_result_item_parts[2]} - ${TODAY_TIMESTAMP}) / 86400 ))"
         info "Writing metrics item '${metrics_item}'"
         echo "${metrics_item}" >> "${PROMETHEUS_EXPORT_FILENAME}"
     done
@@ -230,7 +232,7 @@ check_https_certificate_dates() {
     if [[ "${RC}" != "0" ]]; then
 
         warning "Can't process openssl output for ${remote_hostname}"
-        final_result="${remote_hostname} error error"
+        final_result="${remote_hostname} ${TODAY_TIMESTAMP} ${TODAY_TIMESTAMP} error"
 
     else
 
@@ -242,7 +244,7 @@ check_https_certificate_dates() {
         info "${remote_hostname} Not before ${dates[0]}"
         info "${remote_hostname} Not after ${dates[1]}"
         
-        final_result="${remote_hostname} $(date_to_epoch "${dates[0]}") $(date_to_epoch "${dates[1]}")"
+        final_result="${remote_hostname} $(date_to_epoch "${dates[0]}") $(date_to_epoch "${dates[1]}") ok"
     fi
     
     echo "${final_result}"
@@ -279,7 +281,6 @@ main() {
     local CLI_VERBOSE
 
     local full_result=( )
-    local error_result=( )
     local formatted_result=( )
     local sorted_result=( )
     local input_filename
@@ -368,8 +369,8 @@ main() {
         rc="$?"
         
         if [[ "${rc}" != "0" ]]; then
-            warning "Skipping '${remote_hostname}'"
-            error_result+=( "${remote_hostname}" )
+            warning "Labeling '${remote_hostname}' as failed to get validated"
+            full_result+=( "${current_result}" )
         else
             info "Adding item into full_result: '${current_result}'" 
             full_result+=( "${current_result}" )
@@ -379,16 +380,10 @@ main() {
 
     done < "${input_filename}"
 
-    if [[ "${#full_result[@]}" -le "0" ]]; then
+    if [[ "${#full_result[@]}" -eq "0" ]]; then
         warning "Couldn't process anything from '${input_filename}'"
     else
         info "Processed '${#full_result[@]}' items from '${input_filename}'"
-    fi
-
-    if [[ "${#error_result[@]}" -gt "0" ]]; then
-        for error_item in "${error_result[@]}"; do
-            formatted_result+=( "${error_item}  error   error   -1" )
-        done
     fi
 
     if [[ "${CLI_GENERATE_METRICS}" == "1" ]]; then
@@ -408,7 +403,15 @@ main() {
             fi
         fi
 
-        formatted_result_item="${result_item_parts[0]}  $(epoch_to_date "${result_item_parts[1]}" "+%F %T") $(epoch_to_date "${result_item_parts[2]}" "+%F %T") $(( (result_item_parts[2] - TODAY_TIMESTAMP) / 86400 ))"
+        if [[ "${result_item_parts[3]}" == "ok" ]]; then
+            formatted_result_item="${result_item_parts[0]} $(epoch_to_date "${result_item_parts[1]}" "+%F %T") $(epoch_to_date "${result_item_parts[2]}" "+%F %T") $(( (result_item_parts[2] - TODAY_TIMESTAMP) / 86400 )) ok"
+
+        elif [[ "${result_item_parts[3]}" == "error" ]]; then
+            formatted_result_item="${result_item_parts[0]} error error error error error error"
+        else
+            warning "Couldn't identify status for ${result_item_parts[0]}: '${result_item_parts[3]}'"
+        fi
+
         info "Rendering a formatted result item: '${formatted_result_item}'"
         formatted_result+=( "${formatted_result_item}" )
     done

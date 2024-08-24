@@ -15,7 +15,7 @@
 # Community support:
 # https://github.com/pavelkim/check_certificates/issues
 #
-# Copyright © 2022, Pavel Kim
+# Copyright 2022, Pavel Kim - All Rights Reserved
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
