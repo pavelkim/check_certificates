@@ -16,7 +16,7 @@ services:
       - "./docker/usr/share/nginx/htdocs:/usr/share/nginx/htdocs"
 
   check_certificates:
-    image: ghcr.io/pavelkim/check_certificates/check_certificates:1.9.0
+    image: ghcr.io/pavelkim/check_certificates/check_certificates:1.9.1
     container_name: check_certificates-daemon
     environment:
       CHECK_INTERVAL: 7200

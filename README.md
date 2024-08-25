@@ -70,7 +70,7 @@ docker run \
   -v "/opt/check_certificates/etc/check_certificates:/etc/check_certificates" \
   -v "${PWD}/docker/usr/share/nginx/htdocs:/htdocs" \
   -e CHECK_INTERVAL=$(( 60 * 60 * 2 )) \
-  ghcr.io/pavelkim/check_certificates/check_certificates:1.9.0 \
+  ghcr.io/pavelkim/check_certificates/check_certificates:1.9.1 \
   -i /etc/check_certificates/domains.txt \
   -G
 ```
