@@ -6,6 +6,10 @@ Use this script to automate HTTPS SSL Certificate monitoring. It curl's remote s
 
 Latest release: [Download](https://github.com/pavelkim/check_certificates/releases/latest/download/check_certificates.sh)
 
+Docker Hub: [Visit](https://hub.docker.com/repository/docker/pavelkim/check_certificates/general)
+
+GitHub Registry: [Visit](https://github.com/pavelkim/check_certificates/pkgs/container/check_certificates%2Fcheck_certificates)
+
 # Usage
 
 The script takes on input a file with a list of hostnames:
@@ -66,7 +70,7 @@ docker run \
   -v "/opt/check_certificates/etc/check_certificates:/etc/check_certificates" \
   -v "${PWD}/docker/usr/share/nginx/htdocs:/htdocs" \
   -e CHECK_INTERVAL=$(( 60 * 60 * 2 )) \
-  ghcr.io/pavelkim/check_certificates/check_certificates:1.9.0 \
+  ghcr.io/pavelkim/check_certificates/check_certificates:1.9.1 \
   -i /etc/check_certificates/domains.txt \
   -G
 ```

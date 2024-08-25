@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC2015,SC2236,SC2206
+# shellcheck disable=SC2015,SC2236,SC2206,SC2004
 #
 # Checks if SSL Certificate on https server is valid.
 # ===================================================
@@ -36,6 +36,9 @@ set -o pipefail
 VERSION="DEV"
 TODAY_TIMESTAMP="$(date "+%s")"
 
+[[ -z "${SOURCE_ONLY_MODE}" ]] && SOURCE_ONLY_MODE=0
+
+# shellcheck source=/dev/null
 [[ -f ".config" ]] && source .config || :
 
 usage() {
@@ -433,4 +436,6 @@ main() {
 
 }
 
-main "${@}"
+if [[ "${SOURCE_ONLY_MODE}" == "0" ]]; then
+    main "${@}"
+fi
