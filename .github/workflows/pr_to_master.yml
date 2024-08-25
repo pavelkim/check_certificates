@@ -54,3 +54,20 @@ jobs:
     - name: Test run results verification (metrics)
       run: cat ./metrics
 
+    - name: Prepare shellspec directory
+      id: shellspec_directiry
+      run: |
+        TMP_DIR=$(mktemp -d)
+        echo "shellspec_directory=${TMP_DIR}" >> "${GITHUB_OUTPUT}"
+
+    - name: Install shellspec
+      run: |
+        curl -fsSL -O "${{ steps.shellspec_directory.outputs.shellspec_directory }}/shellspec" https://git.io/shellspec
+        bash "${TMP_DIR}/shellspec" --prefix "${{ steps.shellspec_directory.outputs.shellspec_directory }}" -y
+
+    - name: Run shellspec tests
+      working-directory: ./test
+      run: |
+        "${{ steps.shellspec_directory.outputs.shellspec_directory }}/bin/shellspec" -f d
+
+
