@@ -73,6 +73,6 @@ jobs:
       working-directory: ./test
       shell: bash
       run: |
-        "${{ steps.shellspec_directory.outputs.shellspec_directory }}/bin/shellspec" -f d
+        bash "${{ steps.shellspec_directory.outputs.shellspec_directory }}/bin/shellspec" -f d
 
 
