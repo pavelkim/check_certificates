@@ -71,6 +71,8 @@ jobs:
     - name: Run shellspec tests
       id: shellspec_run
       working-directory: ./test
+      env:
+        TZ: CET
       shell: bash
       run: |
         bash "${{ steps.shellspec_directory.outputs.shellspec_directory }}/bin/shellspec" -f d
